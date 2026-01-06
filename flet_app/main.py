@@ -10,6 +10,7 @@ import os
 import threading
 from datetime import datetime
 import httpx
+import pyperclip
 
 # Available styles with icons and descriptions
 STYLES = [
@@ -305,10 +306,13 @@ def main(page: ft.Page):
     )
     
     def paste_clipboard(e):
-        clipboard_text = page.get_clipboard()
-        if clipboard_text:
-            input_field.value = clipboard_text
-            page.update()
+        try:
+            clipboard_text = pyperclip.paste()
+            if clipboard_text:
+                input_field.value = clipboard_text
+                page.update()
+        except Exception:
+            pass  # Clipboard not available
     
     input_section = ft.Container(
         content=ft.Column([
@@ -336,10 +340,13 @@ def main(page: ft.Page):
     
     def copy_result(e):
         if output_field.value:
-            page.set_clipboard(output_field.value)
-            page.snack_bar = ft.SnackBar(content=ft.Text("✅ Copied!"), bgcolor="#22c55e")
-            page.snack_bar.open = True
-            page.update()
+            try:
+                pyperclip.copy(output_field.value)
+                page.snack_bar = ft.SnackBar(content=ft.Text("✅ Copied!"), bgcolor="#22c55e")
+                page.snack_bar.open = True
+                page.update()
+            except Exception:
+                pass
     
     copy_button = ft.IconButton(icon=ft.Icons.COPY, icon_color=ft.Colors.WHITE70, 
                                 tooltip="Copy", on_click=copy_result, disabled=True)
