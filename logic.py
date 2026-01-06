@@ -297,7 +297,7 @@ async def process_async(req: TextRequest, db: Session = None) -> dict:
     非同期処理（メイン）
 
     v3.3: オフラインフォールバック対応
-    - APIキー未設定またはAPI失敗時はキャッシュを参照
+    v4.0: PII Masking対応 - APIにPIIを送信しない
     """
     style_mgr = StyleManager()
     config = style_mgr.get_config(req.style, req.current_app)
@@ -320,12 +320,20 @@ async def process_async(req: TextRequest, db: Session = None) -> dict:
         return None
 
     try:
-        # 非同期実行
-        result = await execute_gemini(req.text, config)
+        # PII Masking: マスクしてAPIに送信
+        masked_text, pii_mapping = mask_pii(req.text)
+        
+        # 非同期実行 (マスク済みテキストを送信)
+        result = await execute_gemini(masked_text, config)
 
         if result["success"]:
-            print(f"✅ 処理完了: {sanitize_log(result['result'])}")
-            return {"result": result["result"], "style": req.style}
+            # PII Unmasking: 結果内のプレースホルダを復元
+            final_result = result["result"]
+            if pii_mapping:
+                final_result = unmask_pii(final_result, pii_mapping)
+            
+            print(f"✅ 処理完了: {sanitize_log(final_result)}")
+            return {"result": final_result, "style": req.style}
         else:
             print(f"⚠️ API処理失敗: {result['error']}")
 
