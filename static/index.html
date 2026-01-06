@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Clipboard Pro v3.0</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Yu Gothic UI', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #e0e0e0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            background: linear-gradient(90deg, #00d4ff, #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4ade80;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.offline {
+            background: #f87171;
+            animation: none;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .main-panel {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 20px;
+        }
+
+        .panel h2 {
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            color: #a78bfa;
+        }
+
+        textarea {
+            width: 100%;
+            height: 200px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: #fff;
+            padding: 12px;
+            font-size: 14px;
+            resize: vertical;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #7c3aed;
+        }
+
+        .style-buttons {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .style-btn {
+            padding: 12px 8px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.2s;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        .style-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .style-btn.active {
+            background: linear-gradient(135deg, #7c3aed, #00d4ff);
+        }
+
+        .style-btn .icon {
+            font-size: 1.5em;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .action-btn.primary {
+            background: linear-gradient(135deg, #7c3aed, #5b21b6);
+            color: white;
+        }
+
+        .action-btn.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(124, 58, 237, 0.4);
+        }
+
+        .action-btn.secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .tools-panel {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        .tool-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tool-card:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .tool-card .icon {
+            font-size: 2em;
+            margin-bottom: 8px;
+        }
+
+        .tool-card h3 {
+            font-size: 0.95em;
+            margin-bottom: 4px;
+        }
+
+        .tool-card p {
+            font-size: 0.8em;
+            color: #888;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: #7c3aed;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .alert.show {
+            display: block;
+        }
+
+        .alert.success {
+            background: rgba(74, 222, 128, 0.2);
+            border: 1px solid #4ade80;
+        }
+
+        .alert.error {
+            background: rgba(248, 113, 113, 0.2);
+            border: 1px solid #f87171;
+        }
+
+        .alert.warning {
+            background: rgba(251, 191, 36, 0.2);
+            border: 1px solid #fbbf24;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 AI Clipboard Pro</h1>
+            <div class="status" id="serverStatus">
+                <span class="status-dot" id="statusDot"></span>
+                <span id="statusText">接続確認中...</span>
+            </div>
+        </header>
+
+        <div id="alert" class="alert"></div>
+
+        <div class="style-buttons">
+            <button class="style-btn active" data-style="analyze_component">
+                <span class="icon">🧩</span>
+                Analyze
+            </button>
+            <button class="style-btn" data-style="reasoning_enhancer">
+                <span class="icon">🧠</span>
+                Enhance
+            </button>
+            <button class="style-btn" data-style="structure_data">
+                <span class="icon">🏗️</span>
+                Structure
+            </button>
+            <button class="style-btn" data-style="summary">
+                <span class="icon">📝</span>
+                Summary
+            </button>
+            <button class="style-btn" data-style="proofread">
+                <span class="icon">✏️</span>
+                Proofread
+            </button>
+        </div>
+
+        <div class="main-panel">
+            <div class="panel">
+                <h2>📥 入力テキスト</h2>
+                <textarea id="inputText" placeholder="ここにテキストを入力またはペースト..."></textarea>
+            </div>
+            <div class="panel">
+                <h2>📤 出力結果</h2>
+                <textarea id="outputText" readonly placeholder="変換結果がここに表示されます..."></textarea>
+            </div>
+        </div>
+
+        <!-- ⚙️ 詳細設定パネル -->
+        <div style="margin-bottom: 20px;">
+            <button class="action-btn secondary" onclick="toggleDetails()"
+                style="width: 100%; text-align: left; padding: 10px 15px;">
+                ⚙️ 詳細設定 (温度・先読み) <span id="detailArrow">▼</span>
+            </button>
+            <div id="detailPanel"
+                style="display: none; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 0 0 8px 8px; border: 1px solid rgba(255,255,255,0.1); border-top: none;">
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">🌡️ 温度 (創造性): <span
+                            id="tempValue">Auto</span></label>
+                    <input type="range" id="tempSlider" min="0" max="100" value="-1" style="width: 100%;">
+                    <p style="font-size: 0.8em; color: #aaa;">
+                        左: 正確 (-1=自動) | 右: 創造的
+                    </p>
+                </div>
+                <div>
+                    <button class="action-btn secondary" onclick="runPrefetch()">
+                        🚀 すべてのスタイルを先読み (Pre-Fetch)
+                    </button>
+                    <p style="font-size: 0.8em; color: #aaa; margin-top: 5px;">
+                        ※ サーバー側ですべてのスタイルの回答を準備します。待ち時間ゼロになります。
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button class="action-btn primary" id="convertBtn" onclick="convert()">
+                ✨ 変換する
+            </button>
+            <button class="action-btn secondary" onclick="copyOutput()">
+                📋 結果をコピー
+            </button>
+            <button class="action-btn secondary" onclick="pasteInput()">
+                📥 貼り付け
+            </button>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>AI が処理中...</p>
+        </div>
+
+        <div class="tools-panel">
+            <div class="tool-card" onclick="scanPII()">
+                <div class="icon">🛡️</div>
+                <h3>個人情報スキャン</h3>
+                <p>入力テキストの個人情報を検出</p>
+            </div>
+            <div class="tool-card" onclick="window.open('/docs', '_blank')">
+                <div class="icon">📖</div>
+                <h3>API ドキュメント</h3>
+                <p>Swagger UI を開く</p>
+            </div>
+            <div class="tool-card" onclick="checkHealth()">
+                <div class="icon">🏥</div>
+                <h3>ヘルスチェック</h3>
+                <p>サーバー状態を確認</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '';
+        const API_TOKEN = 'your_secret_token_here';
+        let selectedStyle = 'analyze_component';
+
+        // Style button selection
+        document.querySelectorAll('.style-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.style-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selectedStyle = btn.dataset.style;
+            });
+        });
+
+        // Check server status on load
+        async function checkServerStatus() {
+            try {
+                const res = await fetch(API_BASE + '/');
+                const data = await res.json();
+                document.getElementById('statusDot').classList.remove('offline');
+                document.getElementById('statusText').textContent = `v${data.version} - 接続中`;
+            } catch {
+                document.getElementById('statusDot').classList.add('offline');
+                document.getElementById('statusText').textContent = 'サーバー未接続';
+            }
+        }
+
+        function showAlert(message, type) {
+            const alert = document.getElementById('alert');
+            alert.textContent = message;
+            alert.className = `alert show ${type}`;
+            setTimeout(() => alert.classList.remove('show'), 5000);
+        }
+
+        function setLoading(show) {
+            document.getElementById('loading').classList.toggle('show', show);
+            document.getElementById('convertBtn').disabled = show;
+        }
+
+        async function convert() {
+            const input = document.getElementById('inputText').value.trim();
+            if (!input) {
+                showAlert('テキストを入力してください', 'warning');
+                return;
+            }
+
+            setLoading(true);
+            try {
+                // 温度設定の取得（-1ならnullとして送信=自動）
+                const tempSliderVal = document.getElementById('tempSlider').value;
+                const temp = tempSliderVal == -1 ? null : parseFloat(tempSliderVal) / 100;
+
+                const res = await fetch(API_BASE + '/process', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${API_TOKEN}`
+                    },
+                    body: JSON.stringify({
+                        text: input,
+                        style: selectedStyle,
+                        temperature: temp
+                    })
+                });
+
+                const data = await res.json();
+
+                if (data.result) {
+                    document.getElementById('outputText').value = data.result;
+                    showAlert('変換完了しました！', 'success');
+                } else if (data.detail) {
+                    showAlert(data.detail.message || 'エラーが発生しました', 'error');
+                }
+            } catch (e) {
+                showAlert('サーバーに接続できません', 'error');
+            }
+            setLoading(false);
+        }
+
+        // --- ⚙️ 詳細設定用ロジック ---
+        function toggleDetails() {
+            const panel = document.getElementById('detailPanel');
+            const arrow = document.getElementById('detailArrow');
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                arrow.textContent = '▲';
+            } else {
+                panel.style.display = 'none';
+                arrow.textContent = '▼';
+            }
+        }
+
+        document.getElementById('tempSlider').addEventListener('input', (e) => {
+            const val = e.target.value;
+            const display = document.getElementById('tempValue');
+            if (val == -1) {
+                display.textContent = 'Auto';
+            } else {
+                display.textContent = (val / 100).toFixed(2);
+            }
+        });
+
+        async function runPrefetch() {
+            const input = document.getElementById('inputText').value.trim();
+            if (!input) {
+                showAlert('先読みするテキストを入力してください', 'warning');
+                return;
+            }
+
+            try {
+                const res = await fetch(API_BASE + '/prefetch', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${API_TOKEN}`
+                    },
+                    body: JSON.stringify({ text: input })
+                });
+                const data = await res.json();
+                showAlert('🚀 先読みを開始しました (バックグラウンド)', 'success');
+            } catch {
+                showAlert('先読みリクエストに失敗しました', 'error');
+            }
+        }
+
+        async function copyOutput() {
+            const output = document.getElementById('outputText').value;
+            if (output) {
+                await navigator.clipboard.writeText(output);
+                showAlert('クリップボードにコピーしました', 'success');
+            }
+        }
+
+        async function pasteInput() {
+            try {
+                const text = await navigator.clipboard.readText();
+                document.getElementById('inputText').value = text;
+                showAlert('クリップボードから貼り付けました', 'success');
+            } catch {
+                showAlert('クリップボードの読み取りに失敗しました', 'error');
+            }
+        }
+
+        async function scanPII() {
+            const input = document.getElementById('inputText').value.trim();
+            if (!input) {
+                showAlert('スキャンするテキストを入力してください', 'warning');
+                return;
+            }
+
+            try {
+                const res = await fetch(API_BASE + '/scan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: input })
+                });
+                const data = await res.json();
+
+                if (data.has_risks) {
+                    showAlert(`⚠️ ${data.risk_count}件の個人情報を検出: ${Object.keys(data.risks).join(', ')}`, 'warning');
+                } else {
+                    showAlert('✅ 個人情報は検出されませんでした', 'success');
+                }
+            } catch {
+                showAlert('スキャンに失敗しました', 'error');
+            }
+        }
+
+        async function checkHealth() {
+            try {
+                const res = await fetch(API_BASE + '/healthz');
+                const data = await res.json();
+                const checks = Object.entries(data.checks).map(([k, v]) => `${k}: ${v}`).join(', ');
+                showAlert(`ステータス: ${data.status} | ${checks}`, 'success');
+            } catch {
+                showAlert('ヘルスチェックに失敗しました', 'error');
+            }
+        }
+
+        // Initialize
+        checkServerStatus();
+        setInterval(checkServerStatus, 30000);
+    </script>
+</body>
+
+</html>
