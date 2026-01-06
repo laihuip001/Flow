@@ -1,8 +1,24 @@
-# AI Clipboard Pro v3.3 Titanium Edition
+# AI Clipboard Pro v4.0 Titanium Edition
 
-> 🛡️ **The Unbreakable Hybrid** - Strategic AI + Autonomous Defense
+> 🚀 **From Script to App** - AI-powered clipboard processing with beautiful GUI
 
-PCのパワフルな計算能力でAIを動かし、スマホやPC自身からあらゆるテキストを「プロンプトエンジニアリング視点」で変換・整理するためのツールキットです。
+PCのパワフルな計算能力でGemini 3を動かし、スマホやPC自身からあらゆるテキストを「AI視点」で変換・整理するためのツールキットです。
+
+## ✨ NEW: Flet GUI App (v4.0)
+
+**HTTP Shortcutsなしで使える、統合GUIアプリが誕生！**
+
+```powershell
+# 起動方法
+python flet_app/main.py
+```
+
+| Feature | Description |
+|:--|:--|
+| 🎨 **タイルUI** | 5つのスタイルをワンタップで選択 |
+| 📜 **履歴** | 処理結果を自動保存、後から参照可能 |
+| ⚡ **ストリーミング** | AIの回答をリアルタイム表示 |
+| 🌊 **オンボーディング** | 初回起動時の親切なセットアップガイド |
 
 ## 🏛️ Architecture Overview
 
