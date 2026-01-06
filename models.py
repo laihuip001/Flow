@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, JSON
+from sqlalchemy import Column, String, Text, DateTime, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from pydantic import BaseModel, Field
 from datetime import datetime

@@ -8,9 +8,7 @@ Phase 4.3 Beta - Flet 0.80+ compatible.
 import flet as ft
 import json
 import os
-import threading
 from datetime import datetime
-import httpx
 import pyperclip
 
 # Available styles with icons and descriptions

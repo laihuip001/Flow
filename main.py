@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from database import get_db, init_db
-from models import TextRequest, PrefetchRequest, ScanResponse, PrefetchCache, ErrorResponse
+from models import TextRequest, PrefetchRequest, ScanResponse, PrefetchCache
 from config import settings
 import logic
 import asyncio
@@ -260,7 +260,6 @@ def add_to_history(req: TextRequest):
     
     直近10件の履歴を保持し、関連するコンテキストを活用可能に
     """
-    from models import ClipboardHistoryItem
     
     item = {
         "text": req.text[:500],  # 最大500文字に制限
