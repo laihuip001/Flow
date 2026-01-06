@@ -1,25 +1,88 @@
-# Titanium Constitution
+# Flow AI Development Rules (Gemini Code Assist)
 
-This project follows the Titanium Strategist system context.
+> Version: 4.0.0 | Last Updated: 2026-01-06
 
-## Core Rules
+This file configures AI coding assistance for the Flow AI project.
 
-1. **You are the COMMANDER, not the worker.** Create Task Orders for Jules, do not implement directly unless instructed.
+---
 
-2. **Termux Compatibility Filter:**
-   - NEVER use: `pandas`, `numpy`, `scipy`, `lxml`, Rust dependencies
-   - `pyperclip` requires Termux fallback (`termux-clipboard-get`)
+## 1. Project Context
 
-3. **Safety Constraints:**
-   - Do NOT overwrite `config.json` or user data
-   - Maintain backward compatibility for APIs
-   - Create tests BEFORE implementation
+- **Product:** Flow AI v4.0 - Text Pre-processing Tool  
+- **Philosophy:** "Pre-processing × Speed" (前処理と速度)
+- **Core Concept:** The "Seasoning" spectrum (0-100) replaces discrete styles
 
-4. **Current State:**
-   - Phase 4 COMPLETE (v4.0.0)
-   - Flet GUI app working (~5s response)
-   - PII Masking functions exist but NOT integrated into flow
+---
+
+## 2. Architecture Rules
+
+### File Structure
+
+```
+src/
+├── core/      # Business Logic (processor, seasoning, privacy)
+├── api/       # FastAPI Endpoints
+├── app/       # Flet Desktop GUI
+└── infra/     # Database, External Services
+```
+
+### Import Order (PEP8 + isort)
+
+1. Standard Library
+2. Third-party
+3. Local (`from src.core...`)
+
+---
+
+## 3. Coding Standards (See CONSTITUTION.md Section 6)
+
+### Must Follow
+
+- **Type Hints:** ALL functions require parameter and return types
+- **Docstrings:** Google style (Args, Returns, Raises)
+- **Constants:** No magic numbers. Use `SALT_MAX = 30`, not `30`
+- **Error Handling:** Never `except: pass`. Always log or return structured error
+
+### Naming
+
+| Type | Convention | Example |
+|------|------------|---------|
+| Class | PascalCase | `CoreProcessor` |
+| Function | snake_case | `process_text` |
+| Constant | UPPER_SNAKE | `MAX_RETRIES` |
+
+---
+
+## 4. Termux Compatibility
+
+### Banned Libraries (ARM64 incompatible)
+
+- `pandas`, `numpy`, `scipy`, `lxml`
+- Any Rust-based dependencies
+
+### PC-Only Libraries (Auto-skip on Termux)
+
+- `flet`, `keyboard`, `pyperclip`
+
+---
+
+## 5. Security Constraints (OWASP LLM)
+
+- **API Keys:** Always from `.env`, never hardcoded
+- **PII:** Must be masked before sending to LLM (`mask_pii()`)
+- **User Input:** Treat as untrusted (Prompt Injection risk)
+
+---
+
+## 6. Current State
+
+- **Version:** 4.0.0 (Seasoning Update)
+- **Test Status:** `test_logic.py`, `test_privacy.py` passing
+- **Known Issues:** Some legacy tests may reference `style` instead of `seasoning`
+
+---
 
 ## Reference
 
-See full context: `.ai/SYSTEM_CONTEXT.md`
+- Full standards: [CONSTITUTION.md](file:///CONSTITUTION.md)
+- System context: [.ai/SYSTEM_CONTEXT.md](file:///.ai/SYSTEM_CONTEXT.md)

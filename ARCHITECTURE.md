@@ -1,188 +1,115 @@
-# 🏛️ Architecture & Workflow: AI Clipboard Pro v3.3 Titanium
+# 🏛️ Architecture & Workflow: AI Clipboard Pro v4.0 "Unified Core"
 
 ## 1. System Overview (Structural View)
 
-本プロジェクトは、**Strategic Layer (脳)** と **Execution Layer (手)** を明確に分離し、**Runtime Layer (現場)** の自律稼働を保証する「Titanium Architecture」を採用しています。
+本プロジェクトは、**Unified Core Strategy**により、すべてのアプリケーションが単一の「頭脳」を共有する構造に進化しました。これにより、PCアプリとAPIサーバー間のロジック乖離を永久に防ぎます。
 
-### 🌐 垂直統合ロールマップ (Vertical Integration)
+### 🌐 The Unified Core Diagram
 
 ```mermaid
 graph TD
     %% ==========================
-    %% 0. THE ARCHITECT
+    %% 1. THE BRAIN (Shared Core)
     %% ==========================
-    User((👤 The Architect<br>あなた))
-
-    %% ==========================
-    %% 1. STRATEGIC LAYER (脳)
-    %% ==========================
-    subgraph "🧠 STRATEGIC LAYER (司令室)"
-        Claude[🟣 Claude Pro / Gemini 3 Pro<br>最高意思決定・設計図生成]
-        AIStudio[🧪 Google AI Studio<br>プロンプト実験・モデル調整]
-        DebugLog[📄 .ai/DEBUG_LOG.md<br>エラー分析・再設計]
+    subgraph "🧠 src/core (The Brain)"
+        Processor["CoreProcessor<br>(Business Logic)"]
+        Privacy["PrivacyScanner<br>(Zero-Trust Security)"]
+        Gemini["Gemini Client<br>(LLM Interface)"]
+        Styles["StyleManager<br>(Prompts & Config)"]
     end
 
     %% ==========================
-    %% 2. PROTOCOL LAYER (プロトコル)
+    %% 2. THE MEMORY (Infrastructure)
     %% ==========================
-    subgraph "📋 PROTOCOL (共通言語)"
-        TaskFile[📄 .ai/JULES_TASK.md<br>構造化指示プロトコル]
-        Context[📄 .ai/SYSTEM_CONTEXT.md<br>環境定義・憲法]
+    subgraph "💾 src/infra (The Memory)"
+        DB[(SQLite Database)]
+        Session["Database Session<br>(SQLAlchemy)"]
     end
 
     %% ==========================
-    %% 3. EXECUTION LAYER (手)
+    %% 3. THE INTERFACES (Tracks)
     %% ==========================
-    subgraph "⚡ EXECUTION LAYER (工場)"
-        subgraph "🏠 Home (Power)"
-            Jules_AG[👨‍💻 Jules Local<br>Google Antigravity]
-            Scanner_AG[🔒 secure_push.sh]
-        end
-        subgraph "☕ Mobile (Speed)"
-            Jules_FS[👨‍💻 Jules Cloud<br>Firebase Studio]
-            Scanner_FS[🔒 secure_push.sh]
-        end
+    subgraph "📱 Track A: Product (PC/Mobile)"
+        AppMain["run_app.py<br>(Entry Point)"]
+        FletUI["src/app<br>(Flet GUI)"]
     end
 
-    %% ==========================
-    %% 4. INFRASTRUCTURE (保存)
-    %% ==========================
-    subgraph "💾 INFRASTRUCTURE"
-        GH[🐙 GitHub Repository<br>Single Source of Truth]
+    subgraph "🔌 Track B: Tool (API Server)"
+        ServerMain["run_server.py<br>(Entry Point)"]
+        FastAPI["src/api<br>(REST API)"]
     end
 
-    %% ==========================
-    %% 5. RUNTIME LAYER (現場)
-    %% ==========================
-    subgraph "🛡️ RUNTIME LAYER (要塞)"
-        Termux[📟 Android Termux<br>Pixel 9a / OPPO Pad]
-        Watcher[🛡️ titanium_watcher.sh<br>自律防衛・監視]
-        App[🚀 Application]
-    end
+    %% --- CONNECTIONS ---
+    AppMain --> FletUI
+    ServerMain --> FastAPI
 
-    %% --- FLOW: DOWNSTREAM (設計 -> 稼働) ---
-    User -- "1. 要件定義" --> Claude
-    User -- "検証" --> AIStudio
-    Claude -- "2. 出力" --> TaskFile
-    Context -. "制約適用" .-> Jules_AG
-    Context -. "制約適用" .-> Jules_FS
+    FletUI --> Processor
+    FastAPI --> Processor
+
+    Processor --> Privacy
+    Processor --> Gemini
+    Processor --> Styles
     
-    TaskFile -- "3. 実装指示" --> Jules_AG
-    TaskFile -- "3. 実装指示" --> Jules_FS
-    
-    Jules_AG -- "Commit" --> Scanner_AG
-    Jules_FS -- "Commit" --> Scanner_FS
-    
-    Scanner_AG -- "4. Pass & Push" --> GH
-    Scanner_FS -- "4. Pass & Push" --> GH
-    
-    GH -- "5. Poll & Pull" --> Watcher
-    Watcher -- "6. Deploy" --> App
+    Processor --> Session
+    Session --> DB
 
-    %% --- FLOW: UPSTREAM (エラー -> 改善) ---
-    App -- "❌ Crash" --> DebugLog
-    DebugLog -- "7. 分析" --> Claude
-
-    %% スタイル定義
-    classDef role fill:#222,stroke:#fff,stroke-width:4px,color:#fff;
-    classDef brain fill:#7e22ce,stroke:#fff,color:#fff;
-    classDef protocol fill:#f59e0b,stroke:#fff,color:#000;
-    classDef worker fill:#10b981,stroke:#fff,color:#fff;
-    classDef security fill:#ef4444,stroke:#fff,color:#fff;
+    %% Styles
+    classDef core fill:#7e22ce,stroke:#fff,color:#fff;
     classDef infra fill:#3b82f6,stroke:#fff,color:#fff;
-    
-    class User role;
-    class Claude,AIStudio,DebugLog brain;
-    class TaskFile,Context protocol;
-    class Jules_AG,Jules_FS worker;
-    class Scanner_AG,Scanner_FS,Watcher security;
-    class GH,Termux,App infra;
+    classDef app fill:#10b981,stroke:#fff,color:#fff;
+    classDef api fill:#f59e0b,stroke:#fff,color:#000;
+
+    class Processor,Privacy,Gemini,Styles core;
+    class DB,Session infra;
+    class AppMain,FletUI app;
+    class ServerMain,FastAPI api;
 ```
 
 ---
 
-## 2. Development Workflow (Temporal View)
+## 2. Directory Structure & Roles
 
-開発からデプロイまでの時系列フロー。人間の介入はPhase 1に集中し、以降は自動化されます。
+### `src/core` (The Brain) 🧠
 
-### ⏱️ The Titanium Loop
+**「どこでも動く」純粋なロジック**のみを格納します。
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant Arch as 👤 Architect
-    participant Brain as 🧠 Claude/AI Studio
-    participant Jules as 👨‍💻 Jules (IDE)
-    participant GH as 🐙 GitHub
-    participant Watcher as 🛡️ Watcher (Termux)
+* **依存禁止:** UIライブラリ(Flet)、Webフレームワーク(FastAPI)、OS依存機能(pyperclip)。
+* **役割:**
+  * `processor.py`: アプリケーションの全機能を統括。
+  * `privacy.py`: 外部APIを叩く前の最後の砦（PII検知）。
+  * `styles.py`: プロンプトエンジニアリングの集積地。
 
-    Note over Arch, Brain: Phase 1: 戦略設計 (Strategic)
-    Arch->>Brain: 要件定義 & プロンプト検証
-    Brain-->>Arch: .ai/JULES_TASK.md (構造化指示書)
+### `src/infra` (The Memory) 💾
 
-    Note over Arch, Jules: Phase 2: 実装 & 検証 (Execution)
-    Arch->>Jules: 「JULES_TASK.md を実行せよ」
-    Jules->>Jules: コード生成 + 構文チェック (compileall)
-    Jules->>GH: dev_tools/secure_push.sh (Security Scan + Push)
+データの永続化を担当します。
 
-    Note over GH, Watcher: Phase 3: 自律デプロイ (Deployment)
-    Watcher->>GH: 1分ごとに変更監視 (Polling)
-    GH-->>Watcher: 変更検知 (Diff)
-    Watcher->>Watcher: git pull + pip install
-    Watcher->>Watcher: /healthz 監視 + Circuit Breaker
+* `database.py`: DB接続セッションの管理。
 
-    Note over Watcher, Arch: Phase 4: 稼働 (Production)
-    Watcher-->>Arch: Health OK / 自動停止 (Panic)
-```
+### `src/app` (The Face) 📱
+
+**ユーザーとの対話**を担当します。
+
+* **Track A (Product):** PCおよびAndroidで動作するFletアプリ。
+* ロジックは持たず、ユーザーの入力を `src/core` に渡し、結果を表示するだけです。
+
+### `src/api` (The Gateway) 🔌
+
+**外部システム連携**を担当します。
+
+* **Track B (Tool):** Termuxや他ツールからのHTTPリクエストを受け付けます。
+* FastAPIのエンドポイント定義のみを行い、処理は `src/core` に委譲します。
 
 ---
 
-## 3. Core Principles (Titanium 3鉄則)
+## 3. Development Workflow
 
-### ① Protocol First (「伝書鳩」からの卒業)
+### 🔄 The "Unified" Cycle
 
-- **従来:** あなたがClaudeの回答を読み、要約してJulesに伝えていた。
-- **現在:** Claudeが生成した `.ai/JULES_TASK.md` を、Julesが直接読み取る。
-- **効果:** 指示の劣化（ハルシネーション）を防止。
+1. **Logic Update**: `src/core/styles.py` のプロンプトを修正すると...
+2. **Instant Reflection**: PCアプリ(App)とAPIサーバー(Server)の**両方に即座に反映**されます。
+3. **Deployment**:
+    * PC: `run_app.py` で即起動。
+    * Mobile: 将来的に `flet build apk` でビルド。
+    * Server: `run_server.py` で常駐。
 
-### ② Environment Agnostic (開発拠点の完全同期)
-
-- **自宅:** Antigravity IDEのJulesが `sync.sh start` で最新状態を取得。
-- **外出先:** Firebase Studio (OPPO Pad/カフェ) で続きを実装。
-- **結果:** どのデバイスでも常に最新のコードとAIの思考がある。
-
-### ③ Titanium Shield (Termuxを「要塞」に)
-
-- **監視:** `/healthz` を叩き、ゾンビ状態を検知。
-- **防衛:** 無限再起動ループで発熱死を防ぐCircuit Breaker。
-- **制約:** `SYSTEM_CONTEXT.md` によりTermux非互換ライブラリを排除。
-
----
-
-## 4. Directory Structure
-
-```
-📁 Project Root
-├── .ai/                    # Strategic Layer
-│   ├── SYSTEM_CONTEXT.md   # Agent Constitution
-│   ├── JULES_TASK.md       # Task Protocol
-│   └── DEBUG_LOG.md        # Error Template
-├── maintenance/            # Runtime Layer
-│   └── titanium_watcher.sh # Auto-Deploy + Circuit Breaker
-├── dev_tools/              # Dev Layer
-│   ├── secure_push.sh      # Secret Scan
-│   └── sync.sh             # Dev Ritual
-├── github_agent/           # MCP Agent
-└── main.py                 # Core App
-```
-
----
-
-## 5. Your Role: The Architect
-
-1. **Claude** で「何を作るか（What）」を決定
-2. **AI Studio** で「AIの言葉（Prompt）」の精度を極める
-3. **Jules** に「作業（How）」を命じ、GitHubへ流し込ませる
-4. **Titanium Watcher** が現場（Termux）を24時間守り抜く
-
-このサイクルを回すことで、最小限の労力で最大限に堅牢なAIシステムを構築し続けることができます。
+この「一箇所直せば全て直る」状態こそが、Unified Coreの真価です。

@@ -46,28 +46,20 @@ def test_history():
         print("❌ FAIL: History mismatch")
 
 def test_suggest_style():
-    print_header("Testing /suggest-style (App Name Independence)")
+    """DEPRECATED: suggest-style is deprecated in v4.0"""
+    print_header("Testing /suggest-style (DEPRECATED - Should return default)")
     
-    cases = [
-        {"text": "お世話になっております。よろしくお願いいたします。", "expected": "business"},
-        {"text": "これめっちゃ面白いwww 笑", "expected": "casual"},
-        {"text": "Summary: 1. Item 2. Item", "expected": "summary"},
-        {"text": "This is an english text.", "expected": "english"}
-    ]
-    
-    for case in cases:
-        res = requests.post(f"{BASE_URL}/suggest-style", json={"text": case["text"]})
-        data = res.json()
-        print(f"Text: {case['text'][:20]}... -> Suggested: {data['suggested_style']}")
-        if data["suggested_style"] == case["expected"]:
-            print("✅ PASS")
-        else:
-            print(f"❌ FAIL (Expected {case['expected']})")
+    res = requests.post(f"{BASE_URL}/suggest-style", json={"text": "test"})
+    data = res.json()
+    if data.get("suggested_style") == "default":
+        print("✅ PASS: Deprecated endpoint returns default")
+    else:
+        print(f"❌ FAIL: Expected 'default', got {data.get('suggested_style')}")
 
 try:
     test_analyze()
     test_history()
     test_suggest_style()
-    print("\n✅ P2 Test Suite Completed")
+    print("\n✅ P2 Test Suite Completed (v4.0)")
 except Exception as e:
     print(f"\n❌ Test Suite Failed: {e}")

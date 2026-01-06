@@ -1,0 +1,33 @@
+# Environment Variables
+.env
+.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.manifest
+*.spec
+
+# Database
+*.db
+*.sqlite3
+
+# Logs
+*.log
+tunnel.log
+
+# Cloudflared
+cloudflared.exe
+.cloudflared/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Titanic Specific
+venv/

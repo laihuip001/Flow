@@ -22,7 +22,7 @@ async def main():
     
     payload = {
         "text": INPUT_TEXT,
-        "style": "summary",
+        "seasoning": 50,
         "current_app": "test_script"
     }
     

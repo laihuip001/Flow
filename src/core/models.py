@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Text, DateTime, JSON
+from sqlalchemy import Column, String, Text, DateTime, JSON, Integer
 from sqlalchemy.ext.declarative import declarative_base
 from pydantic import BaseModel, Field
 from datetime import datetime
@@ -20,17 +20,30 @@ class Preset(Base):
     name = Column(String)
     config = Column(JSON)
 
+class SyncJob(Base):
+    """
+    オフライン時のリクエストを保持するキュー (v4.0 Phase 3準備)
+    """
+    __tablename__ = "sync_jobs"
+    id = Column(String, primary_key=True, index=True)
+    text = Column(Text) 
+    seasoning = Column(Integer, default=30)
+    result = Column(Text, nullable=True) # Output result
+    status = Column(String, default="pending") # pending, processing, completed, failed
+    created_at = Column(DateTime, default=datetime.utcnow)
+    retry_count = Column(Integer, default=0)
+
 # API Models
 class TextRequest(BaseModel):
     text: str
-    style: Optional[str] = Field(None, description="business, casual, summary, etc.")
+    seasoning: int = Field(30, description="Seasoning level 0-100 (0=Salt, 50=Sauce, 100=Spice)")
     current_app: Optional[str] = Field(None, description="Optional: アプリ名による補正用")
     mode: Optional[str] = None
     temperature: Optional[float] = None
 
 class PrefetchRequest(BaseModel):
     text: str
-    target_styles: List[str] = ["business", "casual", "summary"]
+    target_seasoning_levels: List[int] = [10, 50, 90]  # Salt, Sauce, Spice
 
 class ScanResponse(BaseModel):
     has_risks: bool
@@ -38,7 +51,7 @@ class ScanResponse(BaseModel):
     risk_count: int
     message: str
 
-# v3.0.1: 改善されたエラーレスポンス
+# v4.0: 改善されたエラーレスポンス
 class ErrorResponse(BaseModel):
     error: str = Field(..., description="エラー種別")
     message: str = Field(..., description="ユーザー向けメッセージ")
@@ -51,7 +64,7 @@ class DiffResponse(BaseModel):
     original: str = Field(..., description="元のテキスト")
     result: str = Field(..., description="変換後のテキスト")
     diff_lines: List[Dict[str, Any]] = Field(default=[], description="行ごとの差分情報")
-    style: Optional[str] = None
+    seasoning: Optional[int] = None
     from_cache: bool = False
 
 class ContextMode(BaseModel):
@@ -71,6 +84,5 @@ class ClipboardHistoryItem(BaseModel):
 class ImageProcessRequest(BaseModel):
     """画像認識用リクエスト"""
     image_base64: str = Field(..., description="Base64エンコードされた画像")
-    style: Optional[str] = None
+    seasoning: int = Field(30, description="Seasoning level 0-100")
     prompt: Optional[str] = Field(None, description="追加の指示")
-

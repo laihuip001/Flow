@@ -1,10 +1,10 @@
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
-from config import settings
-from models import Base
+from src.core.config import settings
+from src.core.models import Base
 
 engine = create_engine(
-    settings.DATABASE_URL, 
+    settings.DATABASE_URL.replace("sqlite:///./tasks.db", "sqlite:///./data/tasks.db"), 
     connect_args={
         "check_same_thread": False,
         "timeout": 30,  # 30秒待機

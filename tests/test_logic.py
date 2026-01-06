@@ -10,8 +10,8 @@ import os
 # プロジェクトルートをパスに追加
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from privacy import PrivacyScanner, mask_pii, unmask_pii
-from styles import StyleManager
+from src.core.privacy import PrivacyScanner, mask_pii, unmask_pii
+from src.core.seasoning import SeasoningManager
 
 
 class TestPrivacyScanner:
@@ -86,21 +86,32 @@ class TestPIIMasking:
         assert mapping == {}
 
 
-class TestStyleManager:
-    """StyleManager テスト"""
+class TestSeasoningManager:
+    """SeasoningManager テスト (v4.0)"""
     
-    def test_get_known_style(self):
-        """既知のスタイル取得"""
-        manager = StyleManager()
-        config = manager.get_config("business")
+    def test_salt_prompt(self):
+        """Salt (0-30) プロンプト取得"""
+        prompt = SeasoningManager.get_system_prompt(10)
         
-        assert "system" in config
-        assert "params" in config
-        assert config["params"]["temperature"] == 0.3
+        assert "Text Cleaner" in prompt
+        assert "Fix typos" in prompt
     
-    def test_get_unknown_style_fallback(self):
-        """未知のスタイルはproofreadにフォールバック"""
-        manager = StyleManager()
-        config = manager.get_config("unknown_style_xyz")
+    def test_sauce_prompt(self):
+        """Sauce (31-70) プロンプト取得"""
+        prompt = SeasoningManager.get_system_prompt(50)
         
-        assert config["params"]["temperature"] == 0.0  # proofreadのtemperature
+        assert "Text Editor" in prompt
+        assert "Clarify" in prompt
+    
+    def test_spice_prompt(self):
+        """Spice (71-100) プロンプト取得"""
+        prompt = SeasoningManager.get_system_prompt(90)
+        
+        assert "Text Enhancer" in prompt
+        assert "Elaborate" in prompt
+    
+    def test_level_label(self):
+        """レベルラベル取得"""
+        assert SeasoningManager.get_level_label(10) == "Salt (Minimal)"
+        assert SeasoningManager.get_level_label(50) == "Sauce (Standard)"
+        assert SeasoningManager.get_level_label(90) == "Spice (Rich)"

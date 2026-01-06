@@ -13,7 +13,7 @@ class PrivacyScanner:
         self.patterns = {
             # 基本PII
             "EMAIL": r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",
-            "PHONE": r"\d{2,4}-\d{2,4}-\d{4}",
+            "PHONE": r"\d{2,4}-\d{2,4}-\d{3,4}",
             "ZIP": r"〒?\d{3}-\d{4}",
             "MY_NUMBER": r"\d{4}[-\s]?\d{4}[-\s]?\d{4}",
             # 拡張パターン (P0-2)

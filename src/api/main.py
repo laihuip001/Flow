@@ -2,18 +2,19 @@ from fastapi import FastAPI, BackgroundTasks, Depends, HTTPException, Header
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from database import get_db, init_db
-from models import TextRequest, PrefetchRequest, ScanResponse, PrefetchCache
-from config import settings
-import logic
+from src.infra.database import get_db, init_db, SessionLocal
+from src.core.models import TextRequest, PrefetchRequest, ScanResponse, PrefetchCache
+from src.core.config import settings
+from src.core import processor as logic
+from src.core.seasoning import SeasoningManager
 import asyncio
 from datetime import datetime
 
 init_db()
 app = FastAPI(
-    title="AI Clipboard Pro v3.0.1",
-    description="The Unbreakable Hybrid - Production Ready",
-    version="3.0.1"
+    title="Flow AI v4.0",
+    description="Pre-processing × Speed - The Seasoning Update",
+    version="4.0.0"
 )
 
 # --- 🔐 認証ミドルウェア (v3.0.1) ---
@@ -64,7 +65,7 @@ async def verify_token(authorization: str = Header(None)):
 @app.get("/", tags=["Health"])
 def health_check():
     """基本的なヘルスチェック"""
-    return {"status": "running", "version": "3.0.1"}
+    return {"status": "running", "version": "4.0.0"}
 
 @app.get("/healthz", tags=["Health"])
 def detailed_health_check():
@@ -82,7 +83,7 @@ def detailed_health_check():
     
     # DB接続チェック
     try:
-        from database import engine
+        from src.infra.database import engine
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
         checks["database"] = "ok"
@@ -90,7 +91,7 @@ def detailed_health_check():
         checks["database"] = f"error: {type(e).__name__}"
     
     # Gemini API設定チェック
-    if settings.GEMINI_API_KEY and settings.GEMINI_API_KEY != "YOUR_API_KEY_HERE":
+    if settings.GEMINI_API_KEY:
         checks["gemini"] = "configured"
     else:
         checks["gemini"] = "not_configured"
@@ -100,16 +101,30 @@ def detailed_health_check():
     
     return {
         "status": "running" if all_ok else "degraded",
-        "version": "3.0.1",
+        "version": "4.0.0",
         "timestamp": datetime.utcnow().isoformat(),
         "auth_enabled": bool(settings.API_TOKEN),
         "checks": checks
     }
 
-# --- 🎨 スタイル一覧 ---
-@app.get("/styles", tags=["Core"])
+# --- 🌶️ Seasoning Presets (v4.0) ---
+@app.get("/seasoning", tags=["Core"])
+def list_seasoning_presets():
+    """利用可能なSeasoningプリセット一覧"""
+    from src.core.seasoning import SALT_MAX, SAUCE_MAX
+    return {
+        "presets": [
+            {"id": "salt", "level": 10, "name": "Salt", "description": "最小限の修正（誤字脱字）"},
+            {"id": "sauce", "level": 50, "name": "Sauce", "description": "標準的な整形"},
+            {"id": "spice", "level": 90, "name": "Spice", "description": "積極的な補完・強化"}
+        ],
+        "thresholds": {"salt_max": SALT_MAX, "sauce_max": SAUCE_MAX}
+    }
+
+# Legacy endpoint for backward compatibility
+@app.get("/styles", tags=["Legacy", "Deprecated"])
 def list_styles():
-    """利用可能なスタイル一覧"""
+    """利用可能なスタイル一覧 (DEPRECATED - use /seasoning instead)"""
     return {
         "styles": [
             {"id": "business", "name": "ビジネス", "description": "丁寧・フォーマル"},
@@ -117,8 +132,14 @@ def list_styles():
             {"id": "summary", "name": "要約", "description": "箇条書き・簡潔"},
             {"id": "english", "name": "英語翻訳", "description": "ビジネス英語"},
             {"id": "proofread", "name": "校正", "description": "誤字脱字修正のみ"}
-        ]
+        ],
+        "deprecated": True,
+        "migration": "Use /seasoning endpoint with 'level' parameter (0-100)"
     }
+
+# --- ⚙️ メイン処理 (認証付き) ---
+# Instantiate CoreProcessor globally
+core_processor = logic.CoreProcessor()
 
 # --- ⚙️ メイン処理 (認証付き) ---
 @app.post("/process", tags=["Core"], dependencies=[Depends(verify_token)])
@@ -128,8 +149,9 @@ async def process_text(req: TextRequest, db: Session = Depends(get_db)):
     
     認証が有効な場合、Authorization: Bearer <token> ヘッダーが必要
     v3.3: オフラインフォールバック対応（キャッシュがあれば使用）
+    v4.0: CoreProcessor利用
     """
-    result = await logic.process_async(req, db)
+    result = await core_processor.process(req, db)
     
     # エラーレスポンスの場合は適切なステータスコードを返す
     if "error" in result:
@@ -151,19 +173,69 @@ async def process_text_stream(req: TextRequest):
     リアルタイム整形（ストリーミング）
     Server-Sent Events (SSE) 形式で部分テキストを順次返却します。
     """
-    # 設定取得用（本来はlogic層にカプセル化すべきだが、generatorに渡すためここで取得）
-    style_mgr = logic.StyleManager()
-    config = style_mgr.get_config(req.style, req.current_app)
+    # 設定取得用
+    system_prompt = SeasoningManager.get_system_prompt(req.seasoning)
+    config = {
+        "system": system_prompt,
+        "params": {"temperature": 0.3}
+    }
     
-    async def event_generator():
-        async for chunk in logic.execute_gemini_stream(req.text, config):
+    def event_generator():
+        for chunk in logic.execute_gemini_stream(req.text, config):
             # SSE format: "data: <content>\n\n"
-            # 改行コードを含むテキストを安全に送るため、JSONエンコード推奨だが
-            # ここではシンプルにテキストを流す（クライアント側で結合）
             yield f"data: {chunk}\n\n"
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+# --- ⚡ Phase 1 Performance: Async Endpoint ---
+# SessionLocal imported at top
+
+async def run_async_bg_job(job_id: str):
+    """Async wrapper for background job with independent DB session"""
+    db = SessionLocal()
+    try:
+        await core_processor.process_sync_job(job_id, db)
+    finally:
+        db.close()
+
+@app.post("/process/async", tags=["Performance"], dependencies=[Depends(verify_token)])
+def process_text_async(req: TextRequest, bg_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    """
+    【高速応答】非同期処理エンドポイント
+    
+    リクエストを即座に受け付け、Job IDを返します。
+    処理はバックグラウンドで実行されます。
+    
+    Returns:
+        job_id (str): 結果確認用のID
+    """
+    # 1. Create Job (uses current db session, commits immediately)
+    job_id = core_processor.create_sync_job(req, db)
+    
+    # 2. Enqueue Background Task (uses NEW db session)
+    bg_tasks.add_task(run_async_bg_job, job_id)
+    
+    return {
+        "status": "accepted",
+        "job_id": job_id,
+        "message": "バックグラウンドで処理を開始しました"
+    }
+
+@app.get("/jobs/{job_id}", tags=["Performance"])
+def get_job_status(job_id: str, db: Session = Depends(get_db)):
+    """ジョブの状態確認"""
+    from src.core.models import SyncJob
+    job = db.query(SyncJob).filter(SyncJob.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    return {
+        "job_id": job.id,
+        "status": job.status,
+        "result": job.result,
+        "created_at": job.created_at
+    }
 
 # --- 🛡️ 安全スキャン ---
 @app.post("/scan", response_model=ScanResponse, tags=["Safety"])
@@ -181,7 +253,7 @@ def scan_text(req: TextRequest):
 @app.post("/prefetch", tags=["Background"], dependencies=[Depends(verify_token)])
 async def trigger_prefetch(req: PrefetchRequest, bg_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """スイッチON時のみ呼ばれる先読み"""
-    bg_tasks.add_task(asyncio.create_task, logic.run_prefetch(req.text, req.target_styles, db))
+    bg_tasks.add_task(asyncio.create_task, core_processor.run_prefetch(req.text, req.target_seasoning_levels, db))
     return {"status": "accepted", "hash": logic.get_text_hash(req.text)}
 
 @app.get("/prefetch/{text_hash}", tags=["Background"])
@@ -193,7 +265,7 @@ def get_prefetch_result(text_hash: str, db: Session = Depends(get_db)):
     return {"status": "found", "results": cache.results}
 
 # --- 🔍 P2: Diff表示UI ---
-from models import DiffResponse, ContextMode
+from src.core.models import DiffResponse, ContextMode
 
 @app.post("/process/diff", response_model=DiffResponse, tags=["P2 Features"], dependencies=[Depends(verify_token)])
 async def process_with_diff(req: TextRequest, db: Session = Depends(get_db)):
@@ -202,7 +274,7 @@ async def process_with_diff(req: TextRequest, db: Session = Depends(get_db)):
     
     変換前後の差分を行単位で返す（ハルシネーション検知用）
     """
-    result = await logic.process_async(req, db)
+    result = await core_processor.process(req, db)
     
     if "error" in result:
         raise HTTPException(status_code=500, detail=result)
@@ -213,7 +285,7 @@ async def process_with_diff(req: TextRequest, db: Session = Depends(get_db)):
         original=req.text,
         result=result["result"],
         diff_lines=diff_lines,
-        style=result.get("style"),
+        seasoning=result.get("seasoning"),
         from_cache=result.get("from_cache", False)
     )
 
@@ -280,47 +352,13 @@ def get_history():
     return {"history": _clipboard_history, "size": len(_clipboard_history)}
 
 # --- 🎯 P2: アプリ名依存排除（テキスト分析によるスタイル自動推定） ---
-@app.post("/suggest-style", tags=["P2 Features"])
+# suggest-style deprecated in v4.0 (Seasoning Update)
+@app.post("/suggest-style", tags=["Core", "Deprecated"])
 def suggest_style(req: TextRequest):
-    """
-    テキスト内容からスタイルを自動推定（アプリ名依存排除）
-    
-    ヒューリスティック分析:
-    - ビジネス用語 → business
-    - カジュアル表現 → casual
-    - 箇条書き/短文 → summary
-    - 英語混在 → english
-    """
-    text = req.text.lower()
-    
-    # スタイル推定ロジック
-    business_keywords = ["お世話", "いたします", "ご確認", "お願い", "ご検討", "拝啓", "敬具", "関係者各位"]
-    casual_keywords = ["笑", "www", "!", "〜", "だよ", "ね！", "よろ"]
-    summary_indicators = text.count("・") + text.count("-") + text.count("1.")
-    english_ratio = sum(1 for c in req.text if c.isascii() and c.isalpha()) / max(len(req.text), 1)
-    
-    scores = {
-        "business": sum(1 for kw in business_keywords if kw in text),
-        "casual": sum(1 for kw in casual_keywords if kw in text),
-        "summary": min(summary_indicators, 5),
-        "english": 5 if english_ratio > 0.3 else 0,
-        "proofread": 0
-    }
-    
-    # 最高スコアのスタイル
-    suggested = max(scores, key=scores.get)
-    if scores[suggested] == 0:
-        suggested = "proofread"  # デフォルト
-    
-    return {
-        "suggested_style": suggested,
-        "confidence": scores[suggested] / 5,
-        "scores": scores,
-        "reason": f"{suggested}スタイルが最も適切と推定"
-    }
+    return {"suggested_style": "default", "confidence": 0.0}
 
 # --- 🖼️ P2: 画像認識（Gemini Vision） ---
-from models import ImageProcessRequest
+from src.core.models import ImageProcessRequest
 
 @app.post("/process/image", tags=["P2 Features"], dependencies=[Depends(verify_token)])
 async def process_image(req: ImageProcessRequest):
@@ -349,10 +387,8 @@ async def process_image(req: ImageProcessRequest):
         
         # プロンプト構築
         prompt = req.prompt or "この画像に含まれるテキストを全て抽出し、整理してください。"
-        if req.style:
-            style_mgr = logic.StyleManager()
-            config = style_mgr.get_config(req.style)
-            prompt = f"{config['system']}\n\n{prompt}"
+        # P3: Use Seasoning 30 (Salt) equivalent for image extraction
+        prompt = f"Role: Optical Character Recognition.\n\n{prompt}"
         
         # API呼び出し
         response = await model.generate_content_async([
@@ -394,7 +430,7 @@ async def global_exception_handler(request, exc):
 
 if __name__ == "__main__":
     import uvicorn
-    print("🚀 AI Clipboard Pro v3.0.1 - Production Ready")
+    print("🚀 Flow AI v4.0 - Pre-processing × Speed")
     print("-" * 50)
     print("📖 API ドキュメント: http://localhost:8000/docs")
     print("🏥 ヘルスチェック: http://localhost:8000/healthz")

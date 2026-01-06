@@ -1,11 +1,11 @@
 """
-AI Clipboard Pro v3.0.1 - Verification Test Suite
+Flow AI v4.0 - Verification Test Suite
 
 このスクリプトを実行して、全ての項目がPASSすることを確認してください。
 
 使用方法:
-    1. サーバー起動: python main.py
-    2. テスト実行: python test_v3.py
+    1. サーバー起動: python run_server.py
+    2. テスト実行: python tests/test_v3.py
 
 環境変数:
     - API_TOKEN: 認証トークン（設定されている場合）
@@ -79,7 +79,7 @@ def test_security_barrier():
     try:
         res = requests.post(
             f"{BASE_URL}/process",
-            json={"text": "test", "style": "business"},
+            json={"text": "test", "seasoning": 30},
             headers=HEADERS_NO_AUTH,
             timeout=10
         )
@@ -97,7 +97,7 @@ def test_auth_with_valid_token():
         return
     
     try:
-        res = requests.get(f"{BASE_URL}/styles", headers=HEADERS_WITH_AUTH, timeout=5)
+        res = requests.get(f"{BASE_URL}/seasoning", headers=HEADERS_WITH_AUTH, timeout=5)
         if res.status_code == 200:
             log("Auth Valid Token", "PASS", "Authenticated request accepted")
         else:
@@ -109,20 +109,20 @@ def test_auth_with_valid_token():
 # Feature Tests
 # =============================================================================
 
-def test_styles_endpoint():
-    """スタイル一覧取得"""
+def test_seasoning_endpoint():
+    """利用可能なSeasoningプリセット一覧取得 (v4.0)"""
     try:
-        res = requests.get(f"{BASE_URL}/styles", timeout=5)
+        res = requests.get(f"{BASE_URL}/seasoning", timeout=5)
         if res.status_code == 200:
-            styles = res.json().get("styles", [])
-            if len(styles) >= 5:
-                log("Styles Endpoint", "PASS", f"{len(styles)} styles available")
+            presets = res.json().get("presets", [])
+            if len(presets) >= 3:  # Salt, Sauce, Spice
+                log("Seasoning Endpoint", "PASS", f"{len(presets)} presets available")
             else:
-                log("Styles Endpoint", "FAIL", f"Expected >= 5 styles, got {len(styles)}")
+                log("Seasoning Endpoint", "FAIL", f"Expected >= 3 presets, got {len(presets)}")
         else:
-            log("Styles Endpoint", "FAIL", f"Status {res.status_code}")
+            log("Seasoning Endpoint", "FAIL", f"Status {res.status_code}")
     except Exception as e:
-        log("Styles Endpoint", "FAIL", str(e))
+        log("Seasoning Endpoint", "FAIL", str(e))
 
 def test_pii_scanner():
     """PIIが含まれるテキストを送信し、検出されるか"""
@@ -158,7 +158,7 @@ def test_pii_scanner_clean():
 
 def test_process_endpoint():
     """メイン処理エンドポイント（認証有効時はトークン必要）"""
-    payload = {"text": "明日の会議について確認", "style": "business"}
+    payload = {"text": "明日の会議について確認", "seasoning": 50}
     headers = HEADERS_WITH_AUTH if API_TOKEN else HEADERS_NO_AUTH
     
     try:
@@ -180,7 +180,7 @@ def test_process_endpoint():
 
 def test_prefetch_endpoint():
     """先読みエンドポイント"""
-    payload = {"text": "テストテキスト", "target_styles": ["business", "casual"]}
+    payload = {"text": "テストテキスト", "target_seasoning_levels": [10, 50, 90]}
     headers = HEADERS_WITH_AUTH if API_TOKEN else HEADERS_NO_AUTH
     
     try:
@@ -204,8 +204,8 @@ def test_prefetch_endpoint():
 
 def test_error_response_format():
     """エラーレスポンスが適切なフォーマットか"""
-    # 不正なスタイルでリクエスト
-    payload = {"text": "", "style": "invalid_style"}
+    # 空テキストでリクエスト
+    payload = {"text": "", "seasoning": 30}
     headers = HEADERS_WITH_AUTH if API_TOKEN else HEADERS_NO_AUTH
     
     try:
@@ -227,7 +227,7 @@ def test_acknowledge_risks_blocked():
     """PIIを含むテキストをacknowledge_risks=falseで送信し、ブロックされるか"""
     payload = {
         "text": "連絡先は user@example.com です。電話は 090-1234-5678。",
-        "style": "business",
+        "seasoning": 50,
         "acknowledge_risks": False
     }
     headers = HEADERS_WITH_AUTH if API_TOKEN else HEADERS_NO_AUTH
@@ -251,7 +251,7 @@ def test_acknowledge_risks_allowed():
     """PIIを含むテキストをacknowledge_risks=trueで送信し、処理されるか"""
     payload = {
         "text": "今日は良い天気です",  # PII無しのテキストで確認
-        "style": "business",
+        "seasoning": 30,
         "acknowledge_risks": True
     }
     headers = HEADERS_WITH_AUTH if API_TOKEN else HEADERS_NO_AUTH
@@ -273,7 +273,7 @@ def test_log_correction_endpoint():
         "original_input": "テスト入力",
         "ai_output": "AIの出力結果",
         "user_corrected": "ユーザーが修正した結果",
-        "style": "business"
+        "seasoning": 50
     }
     
     try:
@@ -311,7 +311,7 @@ def test_health_gemini_status():
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("🧪 AI Clipboard Pro v3.0.1 - Verification Test Suite")
+    print("🧪 Flow AI v4.0 - Verification Test Suite")
     print("=" * 60)
     print(f"📍 Target: {BASE_URL}")
     print(f"🔐 Auth: {'Enabled' if API_TOKEN else 'Disabled (dev mode)'}")
@@ -323,7 +323,7 @@ if __name__ == "__main__":
         requests.get(BASE_URL, timeout=5)
     except requests.exceptions.ConnectionError:
         print("❌ Error: API Server is not running.")
-        print("   Please run: python main.py")
+        print("   Please run: python run_server.py")
         sys.exit(1)
     
     # Health Tests
@@ -343,7 +343,7 @@ if __name__ == "__main__":
     # Feature Tests
     print("✨ Feature Tests")
     print("-" * 40)
-    test_styles_endpoint()
+    test_seasoning_endpoint()
     test_pii_scanner()
     test_pii_scanner_clean()
     test_process_endpoint()

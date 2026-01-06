@@ -6,7 +6,7 @@ Gemini Client Module - Gemini API呼び出し
 import os
 from google import genai
 from google.genai import types
-from config import settings
+from .config import settings
 
 
 # --- API Client Setup ---
@@ -17,7 +17,7 @@ _conf_key = settings.GEMINI_API_KEY.strip()
 if _env_key:
     _api_client = genai.Client(api_key=_env_key)
     print(f"🔐 API Key configured from environment variable ({_env_key[:4]}...)")
-elif _conf_key and _conf_key != "YOUR_API_KEY_HERE":
+elif _conf_key:
     _api_client = genai.Client(api_key=_conf_key)
     print(f"🔐 API Key configured from settings ({_conf_key[:4]}...)")
 else:
@@ -29,7 +29,7 @@ def is_api_configured() -> bool:
     return _api_client is not None
 
 
-async def execute_gemini(text: str, config: dict) -> dict:
+async def execute_gemini(text: str, config: dict, model: str = None) -> dict:
     """
     Gemini API呼び出し（New SDK v1.0 対応）
 
@@ -45,11 +45,11 @@ async def execute_gemini(text: str, config: dict) -> dict:
         }
 
     try:
-        model = settings.MODEL_FAST
+        target_model = model or settings.MODEL_FAST
         prompt = f"{config['system']}\n\n[Input]\n{text}"
 
         response = await _api_client.aio.models.generate_content(
-            model=model,
+            model=target_model,
             contents=prompt,
             config=types.GenerateContentConfig(
                 temperature=config["params"].get("temperature", 0.3)

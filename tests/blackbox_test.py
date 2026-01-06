@@ -27,7 +27,7 @@ def test_normal_business():
     log("Testing Normal Case: Business Style...")
     payload = {
         "text": "やあ、元気？これやっといて。",
-        "style": "business",
+        "seasoning": 50,
         "acknowledge_risks": True
     }
     try:
@@ -43,11 +43,11 @@ def test_normal_business():
     except Exception as e:
         log(f"Exception: {e}", "FAIL")
 
-def test_error_invalid_style():
-    log("Testing Error Case: Invalid Style...")
+def test_error_invalid_seasoning():
+    log("Testing Error Case: Invalid Seasoning Value...")
     payload = {
         "text": "test",
-        "style": "invalid_style_xyz",
+        "seasoning": 999,  # Invalid but should still process
         "acknowledge_risks": True
     }
     try:
@@ -100,5 +100,5 @@ if __name__ == "__main__":
         time.sleep(1)
     
     test_normal_business()
-    test_error_invalid_style()
+    test_error_invalid_seasoning()
     test_security_pii()
