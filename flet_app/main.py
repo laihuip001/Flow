@@ -2,14 +2,14 @@
 AI Clipboard Pro - Flet GUI Application (Beta)
 
 A unified GUI for AI-powered clipboard text processing.
-Phase 4.3 Beta - Distribution ready with onboarding.
+Phase 4.3 Beta - Flet 0.80+ compatible.
 """
 import flet as ft
-import asyncio
 import json
 import os
+import threading
 from datetime import datetime
-from api_client import process_text_stream
+import httpx
 
 # Available styles with icons and descriptions
 STYLES = [
@@ -76,7 +76,65 @@ class ClipboardHistory:
 history = ClipboardHistory()
 
 
-async def main(page: ft.Page):
+from google import genai
+from google.genai import types
+
+# Direct Gemini Client Setup
+_client = None
+_script_dir = os.path.dirname(os.path.abspath(__file__))
+_project_root = os.path.dirname(_script_dir)
+
+def get_gemini_client():
+    global _client
+    if _client is None:
+        # Try environment variable first
+        api_key = os.environ.get("GEMINI_API_KEY", "")
+        
+        # If not found, try .env in project root (absolute path)
+        if not api_key:
+            env_path = os.path.join(_project_root, ".env")
+            print(f"[DEBUG] Looking for .env at: {env_path}")
+            if os.path.exists(env_path):
+                with open(env_path, encoding="utf-8") as f:
+                    for line in f:
+                        if line.startswith("GEMINI_API_KEY="):
+                            api_key = line.split("=", 1)[1].strip().strip('"').strip("'")
+                            print(f"[DEBUG] Found API key: {api_key[:8]}...")
+                            break
+        
+        if api_key:
+            _client = genai.Client(api_key=api_key)
+            print("[DEBUG] Gemini client initialized")
+        else:
+            print("[DEBUG] API key NOT found!")
+    return _client
+
+def process_direct(text: str, style: str) -> str:
+    """Direct Gemini API call (No FastAPI overhead)."""
+    prompts = {
+        "business": "Rewrite as polite business email. Keep meaning.",
+        "casual": "Rewrite casually for chat. Add emoji. Keep meaning.",
+        "summary": "Summarize in bullet points. Keep meaning.",
+        "english": "Translate to professional English. Keep meaning.",
+        "proofread": "Fix typos only. Keep original meaning.",
+    }
+    
+    try:
+        client = get_gemini_client()
+        if not client:
+            return "Error: configured GEMINI_API_KEY not found in .env"
+
+        response = client.models.generate_content(
+            model="models/gemini-3-flash-preview",
+            contents=f"{prompts.get(style, prompts['proofread'])}\n\n[Input]\n{text}",
+            config=types.GenerateContentConfig(temperature=0.3)
+        )
+        return response.text.strip() if response.text else "Error: Empty response"
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+
+def main(page: ft.Page):
     """Main Flet application entry point."""
     
     # Load config
@@ -90,26 +148,27 @@ async def main(page: ft.Page):
     page.window.height = 700
     page.bgcolor = "#1a1a2e"
     
-    # State
-    backend_url = config["backend_url"]
-    selected_style = "business"
-    is_processing = False
+    # State (use list for mutable reference)
+    state = {
+        "backend_url": config["backend_url"],
+        "selected_style": "business",
+        "is_processing": False,
+    }
     
     # ========================================
     # ONBOARDING SCREENS
     # ========================================
     
-    async def complete_onboarding(e):
+    def complete_onboarding(e):
         config["onboarding_complete"] = True
-        config["backend_url"] = backend_url
+        config["backend_url"] = state["backend_url"]
         save_config(config)
         onboarding_view.visible = False
         main_app_view.visible = True
-        await page.update_async()
+        page.update()
     
     def update_url(e):
-        nonlocal backend_url
-        backend_url = e.control.value
+        state["backend_url"] = e.control.value
     
     # Onboarding Step 1: Welcome
     welcome_content = ft.Column([
@@ -144,7 +203,7 @@ async def main(page: ft.Page):
     # Onboarding Step 2: Setup
     url_input = ft.TextField(
         label="Backend URL",
-        value=backend_url,
+        value=state["backend_url"],
         on_change=update_url,
         border_radius=12,
         filled=True,
@@ -201,16 +260,15 @@ async def main(page: ft.Page):
     )
     
     # ========================================
-    # MAIN APP (same as Alpha)
+    # MAIN APP
     # ========================================
     
     def create_style_button(style_info):
-        async def on_click(e):
-            nonlocal selected_style
-            selected_style = style_info["key"]
+        def on_click(e):
+            state["selected_style"] = style_info["key"]
             for btn in style_buttons:
-                btn.bgcolor = "#3d3d5c" if btn.data != selected_style else "#6366f1"
-            await page.update_async()
+                btn.bgcolor = "#3d3d5c" if btn.data != state["selected_style"] else "#6366f1"
+            page.update()
         
         btn = ft.Container(
             content=ft.Column([
@@ -221,7 +279,7 @@ async def main(page: ft.Page):
             height=70,
             bgcolor="#3d3d5c" if style_info["key"] != "business" else "#6366f1",
             border_radius=12,
-            alignment=ft.alignment.center,
+            alignment=ft.Alignment(0, 0),
             on_click=on_click,
             data=style_info["key"],
         )
@@ -246,11 +304,11 @@ async def main(page: ft.Page):
         focused_border_color="#6366f1",
     )
     
-    async def paste_clipboard(e):
-        clipboard_text = await page.get_clipboard_async()
+    def paste_clipboard(e):
+        clipboard_text = page.get_clipboard()
         if clipboard_text:
             input_field.value = clipboard_text
-            await page.update_async()
+            page.update()
     
     input_section = ft.Container(
         content=ft.Column([
@@ -276,12 +334,12 @@ async def main(page: ft.Page):
         read_only=True,
     )
     
-    async def copy_result(e):
+    def copy_result(e):
         if output_field.value:
-            await page.set_clipboard_async(output_field.value)
+            page.set_clipboard(output_field.value)
             page.snack_bar = ft.SnackBar(content=ft.Text("✅ Copied!"), bgcolor="#22c55e")
             page.snack_bar.open = True
-            await page.update_async()
+            page.update()
     
     copy_button = ft.IconButton(icon=ft.Icons.COPY, icon_color=ft.Colors.WHITE70, 
                                 tooltip="Copy", on_click=copy_result, disabled=True)
@@ -299,42 +357,44 @@ async def main(page: ft.Page):
     
     progress_ring = ft.ProgressRing(visible=False, width=20, height=20, color=ft.Colors.WHITE)
     
-    async def process_click(e):
-        nonlocal is_processing
-        
+    def process_click(e):
+        """Direct synchronous processing (NO threading)."""
         if not input_field.value:
             page.snack_bar = ft.SnackBar(content=ft.Text("⚠️ Enter text first"), bgcolor="#f59e0b")
             page.snack_bar.open = True
-            await page.update_async()
+            page.update()
             return
         
-        if is_processing:
+        if state["is_processing"]:
             return
         
-        is_processing = True
+        # Show loading state
+        state["is_processing"] = True
         process_button.disabled = True
         progress_ring.visible = True
-        output_field.value = ""
+        output_field.value = "Processing..."
         copy_button.disabled = True
-        await page.update_async()
+        page.update()
         
-        original_text = input_field.value
+        # Direct synchronous call (NO THREAD)
+        import time
+        start_time = time.time()
         
         try:
-            async for chunk in process_text_stream(original_text, style=selected_style, base_url=backend_url):
-                output_field.value += chunk
-                await page.update_async()
+            result = process_direct(input_field.value, state["selected_style"])
+            elapsed = time.time() - start_time
+            output_field.value = result + f"\n\n[{elapsed:.1f}s]"
             
             copy_button.disabled = False
-            if output_field.value and not output_field.value.startswith("Error"):
-                history.add(original_text, output_field.value, selected_style)
+            if result and not result.startswith("Error"):
+                history.add(input_field.value, result, state["selected_style"])
         except Exception as ex:
             output_field.value = f"Error: {str(ex)}"
         finally:
-            is_processing = False
+            state["is_processing"] = False
             process_button.disabled = False
             progress_ring.visible = False
-            await page.update_async()
+            page.update()
     
     process_button = ft.ElevatedButton(
         content=ft.Row([
@@ -362,7 +422,7 @@ async def main(page: ft.Page):
                     ft.Icon(ft.Icons.HISTORY, size=48, color=ft.Colors.WHITE30),
                     ft.Text("No history yet", color=ft.Colors.WHITE30),
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=8),
-                alignment=ft.alignment.center,
+                alignment=ft.Alignment(0, 0),
                 expand=True,
             )
         
@@ -391,14 +451,14 @@ async def main(page: ft.Page):
     history_container = ft.Container(content=build_history_view(), padding=16, expand=True)
     
     # Navigation
-    async def nav_change(e):
+    def nav_change(e):
         index = e.control.selected_index
         main_view.visible = index == 0
         history_view.visible = index == 1
         settings_view.visible = index == 2
         if index == 1:
             history_container.content = build_history_view()
-        await page.update_async()
+        page.update()
     
     nav_bar = ft.NavigationBar(
         destinations=[
@@ -414,22 +474,22 @@ async def main(page: ft.Page):
     
     # Settings view
     settings_url_field = ft.TextField(
-        label="Backend URL", value=backend_url, border_radius=12, filled=True, bgcolor="#2d2d44",
-        on_change=lambda e: setattr(config, 'backend_url', e.control.value) or save_config(config),
+        label="Backend URL", value=state["backend_url"], border_radius=12, filled=True, bgcolor="#2d2d44",
+        on_change=lambda e: state.update({"backend_url": e.control.value}),
     )
     
-    async def clear_history_click(e):
+    def clear_history_click(e):
         history.clear()
         page.snack_bar = ft.SnackBar(content=ft.Text("History cleared"), bgcolor="#6366f1")
         page.snack_bar.open = True
-        await page.update_async()
+        page.update()
     
-    async def reset_onboarding(e):
+    def reset_onboarding(e):
         config["onboarding_complete"] = False
         save_config(config)
         onboarding_view.visible = True
         main_app_view.visible = False
-        await page.update_async()
+        page.update()
     
     settings_view = ft.Container(
         content=ft.Column([
@@ -437,9 +497,9 @@ async def main(page: ft.Page):
             ft.Divider(height=20, color=ft.Colors.WHITE12),
             settings_url_field,
             ft.Divider(height=20, color=ft.Colors.WHITE12),
-            ft.ElevatedButton(text="Clear History", icon=ft.Icons.DELETE_OUTLINE,
+            ft.ElevatedButton(content=ft.Row([ft.Icon(ft.Icons.DELETE_OUTLINE), ft.Text("Clear History")]),
                             on_click=clear_history_click, style=ft.ButtonStyle(bgcolor="#dc2626")),
-            ft.ElevatedButton(text="Reset Onboarding", icon=ft.Icons.RESTART_ALT,
+            ft.ElevatedButton(content=ft.Row([ft.Icon(ft.Icons.RESTART_ALT), ft.Text("Reset Onboarding")]),
                             on_click=reset_onboarding),
             ft.Divider(height=20, color=ft.Colors.WHITE12),
             ft.Text("AI Clipboard Pro v4.0 Beta", color=ft.Colors.WHITE30, size=12),
@@ -454,7 +514,7 @@ async def main(page: ft.Page):
         ft.Container(height=16),
         ft.Container(
             content=ft.Text("AI Clipboard Pro", size=22, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
-            alignment=ft.alignment.center,
+            alignment=ft.Alignment(0, 0),
         ),
         ft.Container(height=16),
         style_grid,
@@ -484,4 +544,4 @@ async def main(page: ft.Page):
 
 
 if __name__ == "__main__":
-    ft.run(target=main)
+    ft.app(target=main)

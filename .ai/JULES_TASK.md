@@ -1,92 +1,217 @@
-# 🛡️ JULES TASK ORDER: Flet GUI PoC (Phase 4.1)
+# 🛡️ JULES TASK ORDER: Critical Performance & UX Fix (P0 Emergency)
+
+> **Priority:** P0 (Blocker)
+> **Reported Latency:** 90+ seconds (Target: <30s, Ideal: 5s)
+> **Second Issue:** App dies when terminal is closed
+
+---
 
 ## 1. Context & Objectives
 
-* **Goal:** Create a minimal Flet (Python) GUI app that reads clipboard content and sends it to the existing FastAPI backend (`/process` endpoint), displaying the AI-processed result.
-* **Scope:** New directory `flet_app/` with `main.py` and supporting files.
-* **Auditors:** 📱 Interface Sovereign, ⚡ UX Designer, 🌉 SRE
-* **Reference Files:**
-  * `main.py` (Read `/process` endpoint signature)
-  * `models.py` (Read `TextRequest` schema)
-  * `ROADMAP_TITANIUM.md` (Refer for UI Blueprint)
+### Issue A: Catastrophic Latency
 
-## 2. Constraints (Non-Negotiable)
+* **Goal:** Reduce AI processing time from 90+ seconds to <10 seconds for typical text (12 lines).
+* **Root Cause Analysis:**
+    1. `models/gemini-3-flash-preview` is a preview model with unpredictable latency and rate limits.
+    2. System prompts are verbose, consuming unnecessary tokens and increasing TTFT.
+    3. Flet GUI → FastAPI → Gemini is a double-hop adding network overhead.
 
-* **Termux Compat:** Flet is pure Python and Termux-compatible. Do NOT introduce any C-extension dependencies.
-* **Backend Unchanged:** Do NOT modify `main.py` or any existing backend code. The Flet app is a CLIENT only.
-* **No Hardcoded URLs:** Backend URL must be configurable (default: `http://localhost:8000`).
-* **Style:** `black` formatter, Google Docstring.
-* **Test:** Create `flet_app/test_connection.py` to verify backend connectivity BEFORE building UI.
+### Issue B: Terminal Dependency
 
-## 3. Execution Steps
+* **Goal:** Allow the Flet GUI app to run independently of the terminal window.
+* **Root Cause:** `RUN_APP.bat` runs `python flet_app/main.py` in foreground. Closing terminal kills the process.
 
-### Step 1: Analyze
+---
 
-Read the following files to understand the API contract:
+## 2. Reference Files (Read & Analyze First)
 
-* `main.py` lines 124-143 (`/process` endpoint)
-* `models.py` lines 1-20 (`TextRequest` model)
+| File | Purpose |
+|:--|:--|
+| `config.py` | Model configuration (`MODEL_FAST`, `MODEL_SMART`) |
+| `logic.py` | `StyleManager.STYLES` (system prompts), `execute_gemini()` |
+| `flet_app/main.py` | GUI entry point |
+| `RUN_APP.bat` | Launch script |
 
-### Step 2: Setup
+---
 
-Create the following directory structure:
+## 3. Constraints (Non-Negotiable)
 
+* **Termux Compat:** Pure Python only. No new dependencies.
+* **Safety:** Do NOT delete existing model configs. Add new ones alongside.
+* **Backward Compat:** Existing `/process` API must continue to work for HTTP Shortcuts users.
+* **Test:** Measure latency before and after with `time` command.
+
+---
+
+## 4. Execution Steps
+
+### Step 1: Switch to Stable Fast Model
+
+**Target:** `config.py`
+
+```diff
+- MODEL_FAST: str = "models/gemini-3-flash-preview"
+- MODEL_SMART: str = "models/gemini-flash-latest"
++ MODEL_FAST: str = "gemini-2.0-flash"  # Stable, low latency
++ MODEL_SMART: str = "gemini-2.0-flash"  # Same for consistency
 ```
-flet_app/
-├── main.py           # Flet application entry point
-├── api_client.py     # HTTP client for backend communication
-├── test_connection.py # Connectivity test script
-└── requirements.txt  # flet, httpx
-```
 
-### Step 3: Test Plan (Create First)
+**Rationale:** Preview models have unpredictable performance. Stable `gemini-2.0-flash` is optimized for speed.
 
-Create `flet_app/test_connection.py`:
+---
 
-* Send a POST request to `http://localhost:8000/process` with `{"text": "test", "style": "proofread"}`.
-* Assert HTTP 200 response.
-* Print result to console.
+### Step 2: Compress System Prompts (Token Reduction)
 
-### Step 4: Implement `api_client.py`
+**Target:** `logic.py` → `StyleManager.STYLES`
+
+Replace verbose Japanese prompts with minimal English instructions (English has fewer tokens per semantic unit).
 
 ```python
-# Signature
-async def process_text(text: str, style: str = "business", base_url: str = "http://localhost:8000") -> dict:
-    """Send text to backend and return processed result."""
-    ...
+STYLES = {
+    "business": {
+        "system": "Rewrite as polite business email. Keep meaning.",
+        "params": {"temperature": 0.3}
+    },
+    "casual": {
+        "system": "Rewrite casually for chat. Add emoji.",
+        "params": {"temperature": 0.7}
+    },
+    "summary": {
+        "system": "Summarize in bullet points.",
+        "params": {"temperature": 0.1}
+    },
+    "english": {
+        "system": "Translate to professional English.",
+        "params": {"temperature": 0.2}
+    },
+    "proofread": {
+        "system": "Fix typos only. Keep original meaning.",
+        "params": {"temperature": 0.0}
+    }
+}
 ```
 
-Use `httpx.AsyncClient` for async HTTP calls.
+**Token Savings Estimate:** ~70% reduction per request.
 
-### Step 5: Implement `main.py` (Flet App)
+---
 
-Create a minimal UI with:
+### Step 3: Direct API Call (Bypass FastAPI for Local Use)
 
-1. **TextField (Read-Only):** Displays current clipboard content (use `page.get_clipboard()`).
-2. **Dropdown:** Style selector (business, casual, summary, english, proofread).
-3. **ElevatedButton:** "Process" button that triggers API call.
-4. **TextField (Multiline, Read-Only):** Displays AI-processed result.
-5. **ElevatedButton:** "Copy Result" button that copies result to clipboard.
+**Target:** `flet_app/main.py`
 
-UI must follow the blueprint in `ROADMAP_TITANIUM.md` Section 4.3.
+For local PC usage, bypass the FastAPI server entirely and call the Gemini API directly from the Flet app. This eliminates:
+* HTTP serialization/deserialization overhead
+* localhost network latency
+* FastAPI middleware processing
 
-### Step 6: Verify
+Create a new function `call_gemini_direct()` that imports `genai` directly.
 
-1. Ensure FastAPI backend is running (`python main.py`).
-2. Run `python flet_app/test_connection.py` → Expect PASS.
-3. Run `flet flet_app/main.py` → Interact with GUI, verify end-to-end flow.
+```python
+# In flet_app/main.py, add direct Gemini call
+import os
+from google import genai
 
-### Step 7: Commit
+_client = None
+def get_gemini_client():
+    global _client
+    if _client is None:
+        api_key = os.environ.get("GEMINI_API_KEY", "")
+        if not api_key:
+            # Try to load from .env in parent directory
+            env_path = os.path.join(os.path.dirname(__file__), "..", ".env")
+            if os.path.exists(env_path):
+                with open(env_path) as f:
+                    for line in f:
+                        if line.startswith("GEMINI_API_KEY="):
+                            api_key = line.split("=", 1)[1].strip().strip('"')
+                            break
+        if api_key:
+            _client = genai.Client(api_key=api_key)
+    return _client
 
-Create a PR with:
+def process_direct(text: str, style: str) -> str:
+    """Direct Gemini API call, no FastAPI intermediary."""
+    prompts = {
+        "business": "Rewrite as polite business email:",
+        "casual": "Rewrite casually for chat, add emoji:",
+        "summary": "Summarize in bullet points:",
+        "english": "Translate to English:",
+        "proofread": "Fix typos only:",
+    }
+    client = get_gemini_client()
+    if not client:
+        return "Error: API key not configured"
+    
+    response = client.models.generate_content(
+        model="gemini-2.0-flash",
+        contents=f"{prompts.get(style, prompts['proofread'])}\n\n{text}"
+    )
+    return response.text
+```
 
-* Title: `[Titanium] Phase 4.1: Flet GUI PoC`
-* Description: Summary of changes, screenshot of working UI.
+Replace `process_text_fast()` HTTP call with `process_direct()`.
 
-## 4. Acceptance Criteria
+---
 
-* [ ] `flet_app/test_connection.py` passes against running backend.
-* [ ] Flet app launches without errors.
-* [ ] User can paste text, select style, click "Process", and see AI result.
-* [ ] "Copy Result" button correctly copies text to clipboard.
-* [ ] No modifications to existing backend code.
+### Step 4: Fix Terminal Independence
+
+**Target:** `RUN_APP.bat`
+
+Use `pythonw.exe` (windowless Python) or `start /b` with proper detachment:
+
+```batch
+@echo off
+chcp 65001 > nul
+cd /d "%~dp0"
+
+set PYTHON_EXE=C:\Users\laihuip001\AppData\Local\Programs\Python\Python314\pythonw.exe
+
+REM Start backend silently (no window)
+start "" /min "%PYTHON_EXE:pythonw=python%" main.py
+
+REM Wait for backend
+timeout /t 2 /nobreak > nul
+
+REM Start GUI (also survives terminal close)
+start "" "%PYTHON_EXE%" flet_app/main.py
+```
+
+Alternatively, create `RUN_APP.vbs` for truly invisible launch:
+
+```vbs
+Set WshShell = CreateObject("WScript.Shell")
+WshShell.CurrentDirectory = CreateObject("Scripting.FileSystemObject").GetParentFolderName(WScript.ScriptFullName)
+WshShell.Run "pythonw.exe main.py", 0, False
+WScript.Sleep 2000
+WshShell.Run "pythonw.exe flet_app/main.py", 0, False
+```
+
+---
+
+## 5. Verification Plan
+
+### Latency Test
+
+```powershell
+Measure-Command { python -c "from flet_app.main import process_direct; print(process_direct('テスト文章', 'proofread'))" }
+```
+
+**Pass Criteria:** < 10 seconds
+
+### Terminal Independence Test
+
+1. Double-click `RUN_APP.bat` (or `.vbs`)
+2. Close the terminal window
+3. GUI should remain open and functional
+
+---
+
+## 6. Commit
+
+PR Title: `[Titanium] P0: Critical latency fix + terminal independence`
+
+Description:
+* Switched model to stable `gemini-2.0-flash`
+* Compressed system prompts (70% token reduction)
+* Direct Gemini API call in Flet app (bypasses FastAPI for local use)
+* VBS launcher for terminal-independent operation

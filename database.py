@@ -1,15 +1,24 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from config import settings
 from models import Base
 
 engine = create_engine(
-    settings.DATABASE_URL, connect_args={"check_same_thread": False}
+    settings.DATABASE_URL, 
+    connect_args={
+        "check_same_thread": False,
+        "timeout": 30,  # 30秒待機
+    },
+    pool_pre_ping=True,
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def init_db():
     Base.metadata.create_all(bind=engine)
+    # WALモード有効化（並列アクセス改善）
+    with engine.connect() as conn:
+        conn.execute(text("PRAGMA journal_mode=WAL"))
+        conn.commit()
 
 def get_db():
     db = SessionLocal()
@@ -17,3 +26,4 @@ def get_db():
         yield db
     finally:
         db.close()
+

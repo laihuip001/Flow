@@ -32,17 +32,37 @@ class PrivacyScanner:
     """個人情報検知（警告のみ・置換なし）"""
     def __init__(self):
         self.patterns = {
+            # 基本PII
             "EMAIL": r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}',
             "PHONE": r'\d{2,4}-\d{2,4}-\d{4}',
             "ZIP": r'〒?\d{3}-\d{4}',
-            "MY_NUMBER": r'\d{4}[-\s]?\d{4}[-\s]?\d{4}'
+            "MY_NUMBER": r'\d{4}[-\s]?\d{4}[-\s]?\d{4}',
+            # 拡張パターン (P0-2)
+            "IP_ADDRESS": r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}',
+            "API_KEY": r'(sk-|pk_|AIza|ghp_|xox[baprs]-)[a-zA-Z0-9_-]{20,}',
+            "AWS_KEY": r'AKIA[0-9A-Z]{16}',
+            "CREDIT_CARD": r'\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}',
         }
+        # 機密キーワード (大文字小文字無視)
+        self.sensitive_keywords = [
+            "CONFIDENTIAL", "NDA", "INTERNAL ONLY", "機密", "社外秘",
+            "SECRET", "PRIVATE", "DO NOT SHARE", "取扱注意"
+        ]
+    
     def scan(self, text: str) -> dict:
         findings = {}
+        # Regex パターンマッチ
         for p_type, pattern in self.patterns.items():
             matches = re.findall(pattern, text)
             if matches:
                 findings[p_type] = list(set(matches))
+        
+        # キーワードマッチ
+        text_upper = text.upper()
+        keyword_hits = [kw for kw in self.sensitive_keywords if kw.upper() in text_upper]
+        if keyword_hits:
+            findings["SENSITIVE_KEYWORD"] = keyword_hits
+        
         count = sum(len(v) for v in findings.values())
         return {
             "has_risks": count > 0,
@@ -50,28 +70,65 @@ class PrivacyScanner:
             "risk_count": count
         }
 
+# --- 🔒 PII Masking Module (P0-1) ---
+def mask_pii(text: str) -> tuple[str, dict]:
+    """
+    PIIをプレースホルダに置換してAPIに送信可能にする。
+    
+    Returns:
+        tuple: (masked_text, mapping) - マスク済テキストと復元用マッピング
+    """
+    scanner = PrivacyScanner()
+    findings = scanner.scan(text)
+    
+    if not findings["has_risks"]:
+        return text, {}
+    
+    masked_text = text
+    mapping = {}
+    counter = 0
+    
+    for pii_type, values in findings["risks"].items():
+        for val in values:
+            if val in masked_text:  # まだ置換されていない場合のみ
+                placeholder = f"[PII_{counter}]"
+                masked_text = masked_text.replace(val, placeholder)
+                mapping[placeholder] = val
+                counter += 1
+    
+    return masked_text, mapping
+
+def unmask_pii(text: str, mapping: dict) -> str:
+    """
+    プレースホルダをオリジナルのPIIに復元する。
+    """
+    result = text
+    for placeholder, original in mapping.items():
+        result = result.replace(placeholder, original)
+    return result
+
 # --- 🎨 Style Module ---
 class StyleManager:
     """スタイル定義とプロンプト生成"""
     STYLES = {
         "business": {
-            "system": "あなたは優秀な秘書です。入力されたテキストを、丁寧で礼儀正しいビジネスメールや報告書の形式に整えてください。",
+            "system": "Rewrite as polite business email. Keep meaning.",
             "params": {"temperature": 0.3}
         },
         "casual": {
-            "system": "あなたは親しい友人です。入力されたテキストを、SlackやLINE向けのフランクで親しみやすい口調に変換してください。絵文字も適度に使って。",
+            "system": "Rewrite casually for chat. Add emoji.",
             "params": {"temperature": 0.7}
         },
         "summary": {
-            "system": "あなたは要約のプロです。入力されたテキストの要点を抽出し、箇条書きで簡潔にまとめてください。",
+            "system": "Summarize in bullet points.",
             "params": {"temperature": 0.1}
         },
         "english": {
-            "system": "あなたはプロの翻訳家です。入力されたテキストを自然なビジネス英語に翻訳してください。",
+            "system": "Translate to professional English.",
             "params": {"temperature": 0.2}
         },
         "proofread": {
-            "system": "あなたは校正者です。文意を変えず、誤字脱字や不自然な表現のみを修正してください。",
+            "system": "Fix typos only. Keep original meaning.",
             "params": {"temperature": 0.0}
         }
     }
