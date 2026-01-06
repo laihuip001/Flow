@@ -1,32 +1,39 @@
-from google import genai
-from google.genai import types
+"""
+Logic Module - Core processing logic
+
+分割済みモジュールを統合し、後方互換性を維持
+"""
 from config import settings
 import hashlib
 from sqlalchemy.orm import Session
 from models import TextRequest, PrefetchCache
 from datetime import datetime
 import asyncio
-import re
-import os
 
-# API Key Setup
-_api_client = None
-_env_key = os.environ.get("GEMINI_API_KEY", "").strip()
-_conf_key = settings.GEMINI_API_KEY.strip()
+# --- 分割済みモジュールからインポート ---
+from privacy import PrivacyScanner, mask_pii, unmask_pii
+from styles import StyleManager
+from gemini_client import (
+    is_api_configured,
+    execute_gemini,
+    execute_gemini_stream,
+)
 
-if _env_key:
-    _api_client = genai.Client(api_key=_env_key)
-    print(f"🔐 API Key configured from environment variable ({_env_key[:4]}...)")
-elif _conf_key and _conf_key != "YOUR_API_KEY_HERE":
-    _api_client = genai.Client(api_key=_conf_key)
-    print(f"🔐 API Key configured from settings ({_conf_key[:4]}...)")
-else:
-    print("⚠️ API Key NOT configured. Please check .env file.")
-
-
-def is_api_configured() -> bool:
-    """APIキーが設定されているかチェック"""
-    return _api_client is not None
+# 後方互換性のためのエクスポート
+__all__ = [
+    "PrivacyScanner",
+    "mask_pii",
+    "unmask_pii", 
+    "StyleManager",
+    "is_api_configured",
+    "execute_gemini",
+    "execute_gemini_stream",
+    "process_async",
+    "run_prefetch",
+    "get_text_hash",
+    "sanitize_log",
+    "generate_diff",
+]
 
 
 # --- 🛡️ Safety Module ---

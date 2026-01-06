@@ -10,7 +10,8 @@ import os
 # プロジェクトルートをパスに追加
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from logic import PrivacyScanner, mask_pii, unmask_pii, StyleManager
+from privacy import PrivacyScanner, mask_pii, unmask_pii
+from styles import StyleManager
 
 
 class TestPrivacyScanner:
