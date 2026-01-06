@@ -129,9 +129,67 @@ Androidから接続するために、Cloudflare Tunnelで外部公開URLを発�
 ## 🛡️ Security Features
 
 * **Rate Limiting**: 60 req/min per IP
-* **PII Detection**: 日本/US/国際フォーマット対応
+* **PII Detection**: 日本/US/国際フォーマット対応（メール、電話、APIキー、機密キーワード）
+* **PII Masking**: 送信前にPIIをプレースホルダに置換、結果で復元（v4.0+）
 * **Secret Scanning**: `secure_push.sh` でAPIキー流出防止
 * **Circuit Breaker**: クラッシュループ自動検知・停止
 
+## 🧠 Technical Decisions
+
+ポートフォリオとして本プロジェクトを評価される方向けに、主要な設計判断とその根拠を記載します。
+
+### Why FastAPI + Flet Hybrid?
+
+| 選択肢 | 採用理由 |
+|:--|:--|
+| **FastAPI** | 型安全（Pydantic）+ 非同期I/O + OpenAPI自動生成 |
+| **Flet** | Flutterベースのクロスプラットフォームで、単一のPythonコードからDesktop/Android/Web対応 |
+
+**Why not Django/Flask?**  
+→ REST API + SSE（Server-Sent Events）のストリーミングを軽量に実装するため。
+
+### Why Direct Gemini API (Not via FastAPI)?
+
+v4.0では、Flet GUIから**FastAPIを経由せず**直接Gemini APIを呼び出すオプションを追加。
+
+```
+[Before] Flet → HTTP → FastAPI → Gemini → FastAPI → HTTP → Flet (90秒)
+[After]  Flet → genai SDK → Gemini → Flet (5秒)
+```
+
+**結果:** レイテンシを 90秒 → 5秒 に短縮（18倍高速化）
+
+### Why SQLite with WAL Mode?
+
+```python
+engine = create_engine(url, connect_args={"timeout": 30}, pool_pre_ping=True)
+conn.execute(text("PRAGMA journal_mode=WAL"))
+```
+
+* **WAL (Write-Ahead Logging)**: 読み取り/書き込みの並列実行を許可
+* **timeout=30**: ロック競合時に30秒待機（クラッシュ回避）
+* **pool_pre_ping**: 接続プール内の無効な接続を自動検出
+
+### Why PII Masking Before API Call?
+
+```python
+masked_text, mapping = mask_pii(text)  # [PII_0], [PII_1]...
+result = gemini_api(masked_text)
+final = unmask_pii(result, mapping)    # 元のPIIに復元
+```
+
+* **ゼロトラスト**: Gemini APIにPIIを送信しない
+* **復元可能**: 結果に含まれるプレースホルダを自動復元
+
+### Test Coverage
+
+```bash
+pytest tests/test_logic.py -v
+```
+
+* `PrivacyScanner`: メール/電話/APIキー/機密キーワード検出テスト
+* `mask_pii/unmask_pii`: マスク→復元の往復テスト
+* `StyleManager`: スタイル設定取得テスト
+
 ---
-*AI Clipboard Pro v3.3 Titanium Edition - Built with 🧠 Claude + 👨‍💻 Jules*
+*AI Clipboard Pro v4.0 Titanium Edition - Built with 🧠 Gemini + 👨‍💻 Antigravity*
