@@ -9,43 +9,44 @@ import re
 class PrivacyScanner:
     """個人情報検知（警告のみ・置換なし）"""
 
-    def __init__(self):
-        self.patterns = {
-            # 基本PII
-            "EMAIL": r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",
-            "PHONE": r"\d{2,4}-\d{2,4}-\d{3,4}",
-            "ZIP": r"〒?\d{3}-\d{4}",
-            "MY_NUMBER": r"\d{4}[-\s]?\d{4}[-\s]?\d{4}",
-            # 拡張パターン (P0-2)
-            "IP_ADDRESS": r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}",
-            "API_KEY": r"(sk-|pk_|AIza|ghp_|xox[baprs]-)[a-zA-Z0-9_-]{20,}",
-            "AWS_KEY": r"AKIA[0-9A-Z]{16}",
-            "CREDIT_CARD": r"\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}",
-        }
-        # 機密キーワード (大文字小文字無視)
-        self.sensitive_keywords = [
-            "CONFIDENTIAL",
-            "NDA",
-            "INTERNAL ONLY",
-            "機密",
-            "社外秘",
-            "SECRET",
-            "PRIVATE",
-            "DO NOT SHARE",
-            "取扱注意",
-        ]
+    # Class-level compiled patterns for performance
+    PATTERNS = {
+        # 基本PII
+        "EMAIL": re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"),
+        "PHONE": re.compile(r"\d{2,4}-\d{2,4}-\d{3,4}"),
+        "ZIP": re.compile(r"〒?\d{3}-\d{4}"),
+        "MY_NUMBER": re.compile(r"\d{4}[-\s]?\d{4}[-\s]?\d{4}"),
+        # 拡張パターン (P0-2)
+        "IP_ADDRESS": re.compile(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}"),
+        "API_KEY": re.compile(r"(sk-|pk_|AIza|ghp_|xox[baprs]-)[a-zA-Z0-9_-]{20,}"),
+        "AWS_KEY": re.compile(r"AKIA[0-9A-Z]{16}"),
+        "CREDIT_CARD": re.compile(r"\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}"),
+    }
+
+    # 機密キーワード (大文字小文字無視)
+    SENSITIVE_KEYWORDS = [
+        "CONFIDENTIAL",
+        "NDA",
+        "INTERNAL ONLY",
+        "機密",
+        "社外秘",
+        "SECRET",
+        "PRIVATE",
+        "DO NOT SHARE",
+        "取扱注意",
+    ]
 
     def scan(self, text: str) -> dict:
         findings = {}
         # Regex パターンマッチ
-        for p_type, pattern in self.patterns.items():
-            matches = re.findall(pattern, text)
+        for p_type, pattern in self.PATTERNS.items():
+            matches = pattern.findall(text)
             if matches:
                 findings[p_type] = list(set(matches))
 
         # キーワードマッチ
         text_upper = text.upper()
-        keyword_hits = [kw for kw in self.sensitive_keywords if kw.upper() in text_upper]
+        keyword_hits = [kw for kw in self.SENSITIVE_KEYWORDS if kw.upper() in text_upper]
         if keyword_hits:
             findings["SENSITIVE_KEYWORD"] = keyword_hits
 
