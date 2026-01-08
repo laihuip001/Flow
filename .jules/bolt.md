@@ -1,0 +1,3 @@
+## 2024-05-23 - [Regex vs Iterative Replace Performance]
+**Learning:** For replacing multiple substrings, `re.sub` with a pre-compiled regex is significantly faster than iterative `str.replace` only when the number of replacements (N) is large (> 20). For small N (< 20), the overhead of regex construction (even if cached) or just the regex engine invocation + safety checks outweighs the cost of simple iterative replacement.
+**Action:** When optimizing multiple string replacements, benchmark to find the crossover point. Do not assume regex is always faster. Implement a hybrid approach with a threshold.

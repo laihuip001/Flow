@@ -81,10 +81,36 @@ def mask_pii(text: str) -> tuple[str, dict]:
     return masked_text, mapping
 
 
+# Cache for unmask regex patterns based on count
+_unmask_regex_cache = {}
+
 def unmask_pii(text: str, mapping: dict) -> str:
     """
     プレースホルダをオリジナルのPIIに復元する。
     """
+    if not mapping:
+        return text
+
+    # Optimization: Use regex for single-pass replacement if mapping uses standard keys
+    # Threshold for optimization (N >= 20 verified to be faster with cached regex)
+    if len(mapping) >= 20:
+        count = len(mapping)
+
+        # Verify keys are standard [PII_0]...[PII_N-1]
+        # We MUST verify all keys exist in mapping to avoid KeyError in lambda.
+        # This check is O(N) which is negligible compared to O(N*L) of iterative replace.
+        keys = [f"[PII_{i}]" for i in range(count)]
+        if all(k in mapping for k in keys):
+             # Check cache
+            pattern = _unmask_regex_cache.get(count)
+            if not pattern:
+                 # Construct regex: [PII_0]|[PII_1]|...
+                 pattern = re.compile("|".join(re.escape(k) for k in keys))
+                 _unmask_regex_cache[count] = pattern
+
+            return pattern.sub(lambda m: mapping[m.group(0)], text)
+
+    # Fallback to iterative replacement (slower for large N, but simple)
     result = text
     for placeholder, original in mapping.items():
         result = result.replace(placeholder, original)
