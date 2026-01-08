@@ -52,6 +52,20 @@ class PrivacyScanner:
         count = sum(len(v) for v in findings.values())
         return {"has_risks": count > 0, "risks": findings, "risk_count": count}
 
+    def check_deny_list(self, text: str) -> tuple[bool, str | None]:
+        """
+        厳格なDeny List チェック。
+        正規表現を問わず、機密キーワードが含まれる場合は即座に拒否する。
+        
+        Returns:
+            tuple: (is_blocked: bool, matched_keyword: str | None)
+        """
+        text_upper = text.upper()
+        for kw in self.sensitive_keywords:
+            if kw.upper() in text_upper:
+                return True, kw
+        return False, None
+
 
 def mask_pii(text: str) -> tuple[str, dict]:
     """

@@ -107,6 +107,19 @@ def detailed_health_check():
         "checks": checks
     }
 
+@app.get("/healthz/fast", tags=["Health"])
+def fast_health_check():
+    """
+    高速ヘルスチェック（フェイルオーバー用）
+    
+    DB接続やAPI設定を確認せず、即座に200を返す。
+    クライアントはメインリクエスト前にこれを叩き（timeout: 500ms）、
+    サーバー到達不能時は即座にフォールバック先へ切り替える。
+    
+    Response time target: <50ms
+    """
+    return {"status": "alive"}
+
 # --- 🌶️ Seasoning Presets (v4.0) ---
 @app.get("/seasoning", tags=["Core"])
 def list_seasoning_presets():

@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     # 🔐 認証設定 (v4.0)
     API_TOKEN: str = ""  # 空の場合は認証なし（開発モード）
     
+    # 🔒 並列処理制限 (SQLite lock回避)
+    MAX_PREFETCH_WORKERS: int = 1  # プリフェッチジョブの最大並列数
+    
     class Config:
         env_file = ".env"
         extra = "ignore"

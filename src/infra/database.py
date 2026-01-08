@@ -2,6 +2,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from src.core.config import settings
 from src.core.models import Base
+import asyncio
 
 engine = create_engine(
     settings.DATABASE_URL.replace("sqlite:///./tasks.db", "sqlite:///./data/tasks.db"), 
@@ -12,6 +13,9 @@ engine = create_engine(
     pool_pre_ping=True,
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# 🔒 プリフェッチ用セマフォ (SQLite lock回避)
+prefetch_semaphore = asyncio.Semaphore(settings.MAX_PREFETCH_WORKERS)
 
 def init_db():
     Base.metadata.create_all(bind=engine)

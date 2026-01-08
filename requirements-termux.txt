@@ -1,0 +1,17 @@
+# AI Clipboard Pro - Termux (Server Only) Requirements
+# This file excludes GUI-dependent and difficult-to-compile libraries.
+# Use this on Android Termux (aarch64) for headless API server mode.
+
+fastapi>=0.100.0
+uvicorn>=0.23.0
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+google-generativeai>=0.3.0
+python-dotenv>=1.0.0
+sqlalchemy>=2.0.0
+requests>=2.28.0
+
+# EXCLUDED for Termux:
+# flet (Flutter engine, requires x86/x64 binaries)
+# pyperclip (clipboard access not applicable on server)
+# keyboard (requires root or X11 on Linux)
