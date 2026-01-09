@@ -1,0 +1,3 @@
+## 2025-05-23 - [Privacy Scanner Optimization]
+**Learning:** Python's `re.findall` and `str.replace` can be surprisingly fast on small inputs, but O(N) regex substitution beats O(K*N) iterative replacement for complex masking tasks, especially when handling many unique tokens. Also, pre-compiling regexes and pre-calculating string transformations (like `.upper()`) in `__init__` is a low-hanging fruit for frequently instantiated or called classes.
+**Action:** Always check for repeated string transformations in hot loops. For text masking, prefer single-pass regex substitution over iterative replacement to ensure both performance and correctness (handling overlapping matches).
