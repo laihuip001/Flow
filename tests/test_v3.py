@@ -156,6 +156,21 @@ def test_pii_scanner_clean():
     except Exception as e:
         log("PII Scanner (Clean)", "FAIL", str(e))
 
+def test_input_length_limit():
+    """入力サイズ制限のテスト (DoS対策)"""
+    # 10,001文字のテキスト (制限超過)
+    large_text = "a" * 10001
+    payload = {"text": large_text}
+
+    try:
+        res = requests.post(f"{BASE_URL}/scan", json=payload, timeout=5)
+        if res.status_code == 422:
+            log("Input Length Limit", "PASS", "Rejected large payload as expected")
+        else:
+            log("Input Length Limit", "FAIL", f"Expected 422, got {res.status_code}")
+    except Exception as e:
+        log("Input Length Limit", "FAIL", str(e))
+
 def test_process_endpoint():
     """メイン処理エンドポイント（認証有効時はトークン必要）"""
     payload = {"text": "明日の会議について確認", "seasoning": 50}
@@ -346,6 +361,7 @@ if __name__ == "__main__":
     test_seasoning_endpoint()
     test_pii_scanner()
     test_pii_scanner_clean()
+    test_input_length_limit()
     test_process_endpoint()
     test_prefetch_endpoint()
     print()

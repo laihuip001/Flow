@@ -35,7 +35,7 @@ class SyncJob(Base):
 
 # API Models
 class TextRequest(BaseModel):
-    text: str
+    text: str = Field(..., max_length=10000, description="Input text (max 10,000 chars)")
     seasoning: int = Field(30, description="Seasoning level 0-100 (0=Salt, 50=Sauce, 100=Spice)")
     current_app: Optional[str] = Field(None, description="Optional: アプリ名による補正用")
     mode: Optional[str] = None
