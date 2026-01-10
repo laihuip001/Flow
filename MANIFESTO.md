@@ -1,32 +1,32 @@
-# ⚡ Flow AI Manifesto
+# ⚡ Flow AI マニフェスト
 
-**"Pre-processing (下処理) × Speed (速度)"**
+**「下処理（Pre-processing）× 速度（Speed）」**
 
-## 1. The Core Philosophy
+## 1. コア哲学
 
-This product is NOT a chat bot. It is an **Ingredient Pre-processor**.
-Its sole purpose is to prepare raw text (ingredients) for downstream consumption (cooking) by LLMs or Humans.
+この製品はチャットボット**ではない**。**素材の下処理マシン（Ingredient Pre-processor）**である。
+その唯一の目的は、生のテキスト（素材）をLLMや人間が消費（調理）するために準備することだ。
 
-* **Don't Overcook**: We do not create content. We clean, clarify, and enhance.
-* **The "Salt" Principle**: Like salting a fish, our changes should be fundamental and enhancing, not overpowering.
-* **Zero Friction**: The user should feel no resistance. Input -> Flow -> Output.
+* **調理しすぎるな（Don't Overcook）**: 私たちはコンテンツを創造しない。洗い、明確にし、引き立てる。
+* **「塩」の原則（The "Salt" Principle）**: 魚に塩を振るように、私たちの変更は根本的で引き立てるものであるべきで、圧倒するものであってはならない。
+* **ゼロフリクション（Zero Friction）**: ユーザーは抵抗を感じてはならない。入力 → Flow → 出力。
 
-## 2. The Speed Mandate
+## 2. 速度の命令
 
-**Speed is our lifeline.**
-Because we are a "pre-step", we must be instant. Any latency kills the flow.
+**速度は我々の生命線である。**
+私たちは「前段階」であるため、瞬時でなければならない。いかなる遅延もフローを殺す。
 
-* **Model**: Always prefer **Gemini Flash** (or equivalent fastest model). High intelligence is secondary to low latency.
-* **Tokens**: Keep system prompts minimal. Every token counts.
-* **Logic**: Avoid complex routing unless absolutely necessary.
+* **モデル**: 常に**Gemini Flash**（または同等の最速モデル）を優先せよ。高い知能より低いレイテンシーを。
+* **トークン**: システムプロンプトは最小限に。すべてのトークンが重要だ。
+* **ロジック**: 絶対に必要でない限り、複雑なルーティングを避けよ。
 
-## 3. The Spectrum (Seasoning)
+## 3. スペクトラム（味付け）
 
-We do not use discrete "Styles". We use a **Seasoning Spectrum (0-100)**.
+私たちは離散的な「スタイル」を使用しない。**味付けスペクトラム（0-100）**を使用する。
 
-* **0-30 (Salt)**: Restoration. Typos, format, punctuation. **Fastest.**
-* **31-70 (Sauce)**: Clarity. Context supplementation. **Fast.**
-* **71-100 (Spice)**: Enhancement. Creative bridging. **Balanced.**
+* **0-30（Salt / 塩）**: 復元。誤字、書式、句読点。**最速。**
+* **31-70（Sauce / ソース）**: 明確化。文脈の補足。**速い。**
+* **71-100（Spice / スパイス）**: 強化。創造的な橋渡し。**バランス。**
 
 ---
-*This document serves as the immutable Constitution of Flow AI.*
+*このドキュメントはFlow AIの不変の憲法として機能する。*

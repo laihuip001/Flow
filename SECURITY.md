@@ -1,8 +1,8 @@
-# 🔐 AI Clipboard Pro v3.0.1 セキュリティガイド
+# 🔐 Flow AI v4.0 セキュリティガイド
 
 ## 概要
 
-このドキュメントは、AI Clipboard Proを安全に運用するためのガイドラインです。
+このドキュメントは、Flow AIを安全に運用するためのガイドラインです。
 
 ---
 
@@ -63,14 +63,16 @@ Authorization: Bearer your_generated_token_here
 
 ## 📝 ログのセキュリティ
 
-v3.0.1では、ログに個人情報が含まれないよう設計されています:
+v4.0では、ログに個人情報が含まれないよう設計されています:
 
 **Before (危険):**
+
 ```
 📩 受信: お世話になっております。山田太郎です。電話番号は090-1234-5678...
 ```
 
 **After (安全):**
+
 ```
 📩 処理開始: [text:a1b2c3d4...len=128] style=business
 ```
@@ -86,11 +88,12 @@ GET /healthz
 ```
 
 レスポンス例:
+
 ```json
 {
   "status": "running",
-  "version": "3.0.1",
-  "timestamp": "2026-01-04T05:00:00.000000",
+  "version": "4.0.0",
+  "timestamp": "2026-01-10T10:00:00.000000",
   "auth_enabled": true,
   "checks": {
     "api": "ok",

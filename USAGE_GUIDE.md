@@ -1,4 +1,4 @@
-# 📱 AI Clipboard Pro v3.0.1 ユーザーズガイド (Windows 11 & ColorOS 15)
+# 📱 Flow AI v4.0 ユーザーズガイド (Windows 11 & ColorOS 15)
 
 このガイドでは、あなたの **Windows 11 PCを「AI頭脳サーバー」** とし、**ColorOS 15 (OPPO/OnePlus) スマホを「リモコン」** として使う方法を解説します。
 
@@ -82,7 +82,7 @@ Google Playストアから **[HTTP Shortcuts](https://play.google.com/store/apps
 
 ## 💻 PC (Windows 11) での使い方
 
-PCで作業中もAIクリップボードを活用できます。便利な順に3つの方法があります。
+PCで作業中もFlow AIを活用できます。便利な順に3つの方法があります。
 
 ### 方法1: Web GUI (新機能！最もオススメ) 🌐
 

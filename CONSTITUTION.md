@@ -1,82 +1,82 @@
-# Titanium Constitution (Development Norms)
+# Titanium 開発規約（Development Norms）
 
-This document defines the **"Not To Do"** list (Anti-patterns) for the AI-Clipboard-Pro project.
-Violating these rules implies a breach of trust as a professional engineer.
+このドキュメントは、Flow AIプロジェクトにおける **「やってはいけないこと」リスト（アンチパターン）** を定義する。
+これらのルールに違反することは、プロフェッショナルエンジニアとしての信頼を損なう行為とみなす。
 
-Based on internal audits and external standards (OWASP Top 10 for LLM, Python Anti-patterns).
+内部監査および外部基準（OWASP Top 10 for LLM、Pythonアンチパターン）に基づいて策定。
 
-## 🚫 1. Zero Trust Privacy & AI Security (OWASP LLM)
+## 🚫 1. ゼロトラスト・プライバシー & AIセキュリティ（OWASP LLM）
 
-- **NEVER** commit personal information, specific mental health records, or sensitive personal context files (e.g., `ANTIGRAVITY_CONTEXT.md`).
-- **NEVER** leave API Keys hardcoded. Always use `.env`.
-- **NEVER** Implement security features (like `mask_pii`) without integrating them into the actual data flow. "Implemented but unused" is a security hole.
-- **NEVER** Ignore Prompt Injection risks. Treat all user input as untrusted before sending to LLM.
-- **NEVER** Allow "Sensitive Information Disclosure" by sending unmasked PII to external APIs (OWASP LLM06).
+- **絶対禁止**: 個人情報、具体的なメンタルヘルス記録、センシティブなパーソナルコンテキストファイル（例: `ANTIGRAVITY_CONTEXT.md`）をコミットすること。
+- **絶対禁止**: APIキーをハードコードすること。常に `.env` を使用せよ。
+- **絶対禁止**: セキュリティ機能（例: `mask_pii`）を実装しておきながら、実際のデータフローに統合しないこと。「実装済みだが未使用」はセキュリティホールである。
+- **絶対禁止**: プロンプトインジェクション（Prompt Injection）のリスクを無視すること。すべてのユーザー入力はLLMに送信する前に「信頼できないもの」として扱え。
+- **絶対禁止**: 外部APIにマスクされていないPII（個人識別情報）を送信する「機密情報漏洩（Sensitive Information Disclosure）」（OWASP LLM06）を許容すること。
 
-## 🚫 2. Code Hygiene & Python Best Practices
+## 🚫 2. コード衛生 & Pythonベストプラクティス
 
-- **NEVER** leave unused imports (`F401`) or wildcard imports (`from module import *`). Explicit is better than implicit.
-- **NEVER** silence exceptions with `except Exception: pass`. Always log the error or return a structured error response.
-- **NEVER** use mutable default arguments (e.g., `def func(list=[])`).
-- **NEVER** allow "God Objects" or Monolithic functions (> 500 lines). Break them down (Modular Monolith).
-- **NEVER** leave legacy code in the root directory. Migrate to `_archive/` or delete immediately.
-- **NEVER** duplicate entire libraries (DRY principle).
+- **絶対禁止**: 未使用のインポート（`F401`）やワイルドカードインポート（`from module import *`）を放置すること。「明示的は暗黙的より優れている」。
+- **絶対禁止**: `except Exception: pass` で例外を握りつぶすこと。常にエラーをログ出力するか、構造化されたエラーレスポンスを返せ。
+- **絶対禁止**: ミュータブルなデフォルト引数（例: `def func(list=[])`）を使用すること。
+- **絶対禁止**: 「神オブジェクト（God Objects）」や巨大関数（500行超）を許容すること。分割せよ（モジュラーモノリス）。
+- **絶対禁止**: レガシーコードをルートディレクトリに放置すること。`_archive/` へ移動するか、即座に削除せよ。
+- **絶対禁止**: ライブラリを丸ごと複製すること（DRY原則）。
 
-## 🚫 3. Professional Integrity & Architecture
+## 🚫 3. プロフェッショナルとしての誠実さ & アーキテクチャ
 
-- **NEVER** make performance claims (e.g., "90s -> 5s") without a reproducible benchmark script (`tests/benchmark_latency.py`).
-- **NEVER** leave documentation that contradicts the code. Update `README.md` and `ARCHITECTURE.md` synchronously.
-- **NEVER** engaging in "Cargo Culting" (e.g., microservices for a small app). Keep architecture simple and justified.
-- **NEVER** bloat the root directory. Keep high-level structure clean (< 15 files).
+- **絶対禁止**: 再現可能なベンチマークスクリプト（`tests/benchmark_latency.py`）なしに、パフォーマンスの主張（例: 「90秒→5秒」）を行うこと。
+- **絶対禁止**: コードと矛盾するドキュメントを放置すること。`README.md` と `ARCHITECTURE.md` は同期的に更新せよ。
+- **絶対禁止**: 「カーゴ・カルト（Cargo Culting）」に陥ること（例: 小規模アプリにマイクロサービス）。アーキテクチャはシンプルかつ正当化できるものであれ。
+- **絶対禁止**: ルートディレクトリを肥大化させること。高レベル構造は15ファイル未満に保て。
 
-## ⚡ 4. Titanium Operational Protocols (Execution Prime)
+## ⚡ 4. Titanium運用プロトコル（Execution Prime）
 
-These settings are MANDATORY for maximizing productivity (3x) and minimizing risks (0%).
+これらの設定は、生産性を最大化（3倍）しリスクを最小化（0%）するために**必須**である。
 
-### 4.1. MCP (Model Context Protocol) Setup
+### 4.1. MCP（Model Context Protocol）設定
 
-- **GitHub MCP (Required):** Enable for Issue reading & PR creation.
-- **Google Search / Documentation MCP (Required):** Enable for fetching latest SDK docs.
+- **GitHub MCP（必須）:** Issueの読み取りとPR作成のために有効化。
+- **Google検索/ドキュメントMCP（必須）:** 最新のSDKドキュメントを取得するために有効化。
 
-### 4.2. Environment Optimization (.antigravityignore)
+### 4.2. 環境の最適化（.antigravityignore）
 
-- **Context Hygiene:** Exclude `venv/`, `__pycache__/`, and `.git/` to prevent token waste and hallucination from "garbage data".
-- **Action:** Created `.antigravityignore` (mirrors `.gitignore` + `venv/`).
+- **コンテキスト衛生:** `venv/`、`__pycache__/`、`.git/` を除外し、トークンの浪費と「ゴミデータ」によるハルシネーションを防止。
+- **アクション:** `.antigravityignore` を作成済み（`.gitignore` + `venv/` をミラーリング）。
 
-### 4.3. Remote-First UI Settings (Tablet Optimized)
+### 4.3. リモートファーストUI設定（タブレット最適化）
 
-- **Auto Save (ON):** Prevent data loss on disconnect.
-- **Sidebar (RIGHT):** Reduce eye strain (Design on Right, Code on Left).
-- **Font Size (+):** Ensure visibility on tablet screens.
+- **自動保存（ON）:** 切断時のデータ損失を防止。
+- **サイドバー（右）:** 目の疲れを軽減（右にデザイン、左にコード）。
+- **フォントサイズ（+）:** タブレット画面での視認性を確保。
 
-### 4.4. Titanium Debug Automation
+### 4.4. Titaniumデバッグ自動化
 
-- **Terminal Output Analysis (ON):** AI automatically detects and suggests fixes for errors.
-- **Pre-commit Rules:** "Check types/lint before save" (See `.gemini/rules.md`).
+- **ターミナル出力分析（ON）:** AIが自動的にエラーを検出し、修正を提案。
+- **プリコミットルール:** 「保存前に型チェック/Lintを実行」（`.gemini/rules.md` を参照）。
 
-## ⚡ 5. Titanium Deep Customization (Optional but Recommended)
+## ⚡ 5. Titaniumディープカスタマイズ（推奨）
 
-Pro-level tuning for zero-friction development.
+ゼロフリクション開発のためのプロレベルチューニング。
 
-### 5.1. Quality Automation (Extensions)
+### 5.1. 品質自動化（拡張機能）
 
-- **Ruff:** Automatic linting/formatting. "Red squiggles" = Immediate fix required.
-- **GitLens:** Blame line-by-line. Prevent "Black Box" code generation.
+- **Ruff:** 自動リンティング/フォーマット。「赤い波線」= 即座に修正が必要。
+- **GitLens:** 行ごとのBlame表示。「ブラックボックス」コード生成を防止。
 
-### 5.2. Operational Aliases (PowerShell)
+### 5.2. 運用エイリアス（PowerShell）
 
 - `watcher` -> `./maintenance/titanium_watcher.sh`
 - `push` -> `./dev_tools/secure_push.sh`
 - `sync` -> `./dev_tools/sync.sh`
-- **Action:** Run `dev_tools/setup_aliases.ps1`.
+- **アクション:** `dev_tools/setup_aliases.ps1` を実行。
 
-### 5.3. Cost & Auth Guardrails
+### 5.3. コスト & 認証ガードレール
 
-- **Git Credential Manager:** Enable for password-less push.
-- **GCP Shutdown:** Schedule daily stop (e.g., 04:00 AM JST) to prevent cost overrun.
+- **Git Credential Manager:** パスワードなしのプッシュを有効化。
+- **GCPシャットダウン:** 毎日の停止をスケジュール（例: 午前4時 JST）してコストオーバーランを防止。
 
 ---
-*Enforced by Titanium Red Team Audit & Self-Correction protocols*
+*Titanium Red Team Audit & Self-Correctionプロトコルによって執行*
 
 ---
 
@@ -259,4 +259,4 @@ if level <= 30:
 | `.editorconfig` | エディタ共通設定 |
 
 ---
-*Last Updated: 2026-01-06*
+*Last Updated: 2026-01-10*

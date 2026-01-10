@@ -117,7 +117,9 @@ async def main(page: ft.Page):
     def on_preset_click(val: int):
         state["seasoning"] = val
         slider.set_value(val) # Cleaner update
-        page.show_snack_bar(ft.SnackBar(ft.Text(f"Seasoning set to {val}%"), duration=1000))
+        # Compatible fix for Flet < 0.21.0
+        page.snack_bar = ft.SnackBar(ft.Text(f"Seasoning set to {val}%"), duration=1000)
+        page.snack_bar.open = True
         page.update()
 
     btn_salt = ft.ElevatedButton("Salt (10)", on_click=lambda e: on_preset_click(10), bgcolor=ft.Colors.BLUE_900, color=ft.Colors.WHITE)
@@ -143,7 +145,10 @@ async def main(page: ft.Page):
 
     async def btn_process_click(e):
         if not txt_input.value:
-            page.show_snack_bar(ft.SnackBar(ft.Text("テキストを入力してください"), bgcolor=ft.Colors.RED))
+            # Compatible fix
+            page.snack_bar = ft.SnackBar(ft.Text("テキストを入力してください"), bgcolor=ft.Colors.RED)
+            page.snack_bar.open = True
+            page.update()
             return
 
         # Visual Feedback
@@ -155,7 +160,10 @@ async def main(page: ft.Page):
             req = TextRequest(text=txt_input.value, seasoning=state["seasoning"])
             job_id = await asyncio.to_thread(core_processor.create_sync_job, req, db)
         except Exception as ex:
-            page.show_snack_bar(ft.SnackBar(ft.Text(f"Error: {ex}"), bgcolor=ft.Colors.RED))
+            # Compatible fix
+            page.snack_bar = ft.SnackBar(ft.Text(f"Error: {ex}"), bgcolor=ft.Colors.RED)
+            page.snack_bar.open = True
+            page.update()
             db.close()
             return
         finally:
