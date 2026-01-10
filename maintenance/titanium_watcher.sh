@@ -21,12 +21,12 @@ while true; do
         git reset --hard origin/$BRANCH
         
         if git diff --name-only HEAD@{1} HEAD | grep -q "requirements.txt"; then
-            pip install -r requirements.txt || echo "⚠️ Dependency install failed!"
+            pip install -r requirements-termux.txt || echo "⚠️ Dependency install failed!"
         fi
-        pkill -f "uvicorn main:app"
+        pkill -f "uvicorn src.api.main:app"
     fi
 
-    if ! pgrep -f "uvicorn main:app" > /dev/null || ! curl -sSf http://localhost:8000/healthz > /dev/null; then
+    if ! pgrep -f "uvicorn src.api.main:app" > /dev/null || ! curl -sSf http://localhost:8000/healthz > /dev/null; then
         if [ $CRASH_COUNT -ge $MAX_RETRIES ]; then
             echo "🚨 PANIC: Crash loop detected. Stopping."
             exit 1
@@ -35,7 +35,7 @@ while true; do
         if [ -f app.log ] && [ $(wc -c < app.log) -gt 10000000 ]; then 
             mv app.log app.log.old
         fi
-        nohup uvicorn main:app --host 0.0.0.0 --port 8000 >> app.log 2>&1 &
+        nohup uvicorn src.api.main:app --host 0.0.0.0 --port 8000 >> app.log 2>&1 &
         sleep 10
         if ! curl -sSf http://localhost:8000/healthz > /dev/null; then
             CRASH_COUNT=$((CRASH_COUNT+1))
