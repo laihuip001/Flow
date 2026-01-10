@@ -35,7 +35,8 @@ class SyncJob(Base):
 
 # API Models
 class TextRequest(BaseModel):
-    text: str
+    # Security: Limit input length to 10000 chars to prevent DoS attacks
+    text: str = Field(..., max_length=10000, description="Input text to process")
     seasoning: int = Field(30, description="Seasoning level 0-100 (0=Salt, 50=Sauce, 100=Spice)")
     current_app: Optional[str] = Field(None, description="Optional: アプリ名による補正用")
     mode: Optional[str] = None

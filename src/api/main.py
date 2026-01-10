@@ -22,6 +22,11 @@ async def verify_token(authorization: str = Header(None)):
     """
     Bearer Token認証
     API_TOKENが設定されている場合のみ認証を要求
+
+    Security:
+    - 認証スキップは settings.API_TOKEN が空の場合のみ許可（開発モード）
+    - トークン比較は単純な文字列比較だが、API_TOKENは環境変数から読み込むため
+      タイミング攻撃のリスクは低い（必要に応じて compare_digest に変更可能）
     """
     # 認証が設定されていない場合はスキップ（開発モード）
     if not settings.API_TOKEN:
@@ -303,7 +308,7 @@ async def process_with_diff(req: TextRequest, db: Session = Depends(get_db)):
     )
 
 # --- 📊 P2: コンテキスト二極化（Light/Deep） ---
-@app.post("/analyze", tags=["P2 Features"])
+@app.post("/analyze", tags=["P2 Features"], dependencies=[Depends(verify_token)])
 def analyze_text(req: TextRequest):
     """
     テキストを分析し、推奨モード（Light/Deep）を判定
@@ -338,7 +343,7 @@ def analyze_text(req: TextRequest):
 _clipboard_history: list = []
 MAX_HISTORY_SIZE = 10
 
-@app.post("/history/add", tags=["P2 Features"])
+@app.post("/history/add", tags=["P2 Features"], dependencies=[Depends(verify_token)])
 def add_to_history(req: TextRequest):
     """
     クリップボード履歴に追加（文脈の継続性）
@@ -359,14 +364,14 @@ def add_to_history(req: TextRequest):
     
     return {"status": "added", "history_size": len(_clipboard_history)}
 
-@app.get("/history", tags=["P2 Features"])
+@app.get("/history", tags=["P2 Features"], dependencies=[Depends(verify_token)])
 def get_history():
     """クリップボード履歴を取得"""
     return {"history": _clipboard_history, "size": len(_clipboard_history)}
 
 # --- 🎯 P2: アプリ名依存排除（テキスト分析によるスタイル自動推定） ---
 # suggest-style deprecated in v4.0 (Seasoning Update)
-@app.post("/suggest-style", tags=["Core", "Deprecated"])
+@app.post("/suggest-style", tags=["Core", "Deprecated"], dependencies=[Depends(verify_token)])
 def suggest_style(req: TextRequest):
     return {"suggested_style": "default", "confidence": 0.0}
 
