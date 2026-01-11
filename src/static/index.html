@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flow AI v4.0 - Playground</title>
+    <style>
+        :root {
+            --bg-primary: #0f0f0f;
+            --bg-secondary: #1a1a2e;
+            --bg-card: #16213e;
+            --accent: #e94560;
+            --accent-hover: #ff6b6b;
+            --text-primary: #eaeaea;
+            --text-secondary: #a0a0a0;
+            --success: #4ecca3;
+            --border: #2a2a4a;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--accent), #ff8a5b);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--border);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .status-ready {
+            background: rgba(78, 204, 163, 0.2);
+            color: var(--success);
+        }
+
+        .status-streaming {
+            background: rgba(233, 69, 96, 0.2);
+            color: var(--accent);
+            animation: pulse 1s infinite;
+        }
+
+        .status-error {
+            background: rgba(255, 0, 0, 0.2);
+            color: #ff4444;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 120px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            color: var(--text-primary);
+            font-size: 1rem;
+            font-family: inherit;
+            resize: vertical;
+            transition: border-color 0.2s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .seasoning-control {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .seasoning-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .seasoning-value {
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: var(--border);
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .btn {
+            padding: 0.75rem 2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(90deg, var(--accent), #ff6b6b);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(233, 69, 96, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .output-area {
+            min-height: 150px;
+            background: var(--bg-primary);
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-word;
+            border: 1px solid var(--border);
+        }
+
+        .output-placeholder {
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        .presets {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .preset-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-secondary);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .preset-btn:hover,
+        .preset-btn.active {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(233, 69, 96, 0.1);
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 2rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>🌶️ Flow AI Playground</h1>
+            <p class="subtitle">Pre-processing × Speed - Real-time Streaming</p>
+        </header>
+
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">📝 Input</span>
+            </div>
+            <textarea id="inputText" placeholder="整理したいテキストを入力してください..."></textarea>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">🎛️ Seasoning Control</span>
+            </div>
+            <div class="presets">
+                <button class="preset-btn" data-level="10">🧂 Salt</button>
+                <button class="preset-btn active" data-level="30">🍲 Sauce</button>
+                <button class="preset-btn" data-level="90">🌶️ Spice</button>
+            </div>
+            <div class="controls">
+                <div class="seasoning-control">
+                    <div class="seasoning-label">
+                        <span>Level</span>
+                        <span class="seasoning-value" id="seasoningValue">30</span>
+                    </div>
+                    <input type="range" id="seasoningSlider" min="0" max="100" value="30">
+                </div>
+                <button class="btn btn-primary" id="transformBtn">✨ Transform</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">📤 Output</span>
+                <span class="status-badge status-ready" id="statusBadge">Ready</span>
+            </div>
+            <div class="output-area" id="outputArea">
+                <span class="output-placeholder">変換結果がここに表示されます...</span>
+            </div>
+        </div>
+
+        <footer>
+            Flow AI v4.0 | Powered by Gemini
+        </footer>
+    </div>
+
+    <script>
+        const inputText = document.getElementById('inputText');
+        const outputArea = document.getElementById('outputArea');
+        const seasoningSlider = document.getElementById('seasoningSlider');
+        const seasoningValue = document.getElementById('seasoningValue');
+        const transformBtn = document.getElementById('transformBtn');
+        const statusBadge = document.getElementById('statusBadge');
+        const presetBtns = document.querySelectorAll('.preset-btn');
+
+        // Seasoning slider
+        seasoningSlider.addEventListener('input', (e) => {
+            seasoningValue.textContent = e.target.value;
+            updatePresetButtons(parseInt(e.target.value));
+        });
+
+        // Preset buttons
+        presetBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const level = parseInt(btn.dataset.level);
+                seasoningSlider.value = level;
+                seasoningValue.textContent = level;
+                updatePresetButtons(level);
+            });
+        });
+
+        function updatePresetButtons(level) {
+            presetBtns.forEach(btn => {
+                const btnLevel = parseInt(btn.dataset.level);
+                btn.classList.toggle('active', Math.abs(btnLevel - level) < 20);
+            });
+        }
+
+        // Transform button - SSE streaming
+        transformBtn.addEventListener('click', async () => {
+            const text = inputText.value.trim();
+            if (!text) {
+                outputArea.innerHTML = '<span class="output-placeholder">テキストを入力してください</span>';
+                return;
+            }
+
+            // UI state: streaming
+            transformBtn.disabled = true;
+            statusBadge.textContent = 'Streaming...';
+            statusBadge.className = 'status-badge status-streaming';
+            outputArea.textContent = '';
+
+            try {
+                const response = await fetch('/process/stream', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        text: text,
+                        seasoning: parseInt(seasoningSlider.value)
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value, { stream: true });
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6);
+                            if (data === '[DONE]') {
+                                // Stream complete
+                            } else {
+                                outputArea.textContent += data;
+                            }
+                        }
+                    }
+                }
+
+                // UI state: complete
+                statusBadge.textContent = 'Complete';
+                statusBadge.className = 'status-badge status-ready';
+
+            } catch (error) {
+                outputArea.textContent = `Error: ${error.message}`;
+                statusBadge.textContent = 'Error';
+                statusBadge.className = 'status-badge status-error';
+            } finally {
+                transformBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+
+</html>

@@ -8,10 +8,15 @@ This is the main entry point for the FastAPI application.
 All route handlers are organized in the routes/ package.
 """
 from fastapi import FastAPI, Depends, Header, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 from src.infra.database import init_db
 from src.core.config import settings
 from src.core import processor as logic
+
+# Static files directory
+STATIC_DIR = Path(__file__).parent.parent / "static"
 
 # --- Initialize Database ---
 init_db()
@@ -88,6 +93,15 @@ app.include_router(features_router, dependencies=[Depends(verify_token)])
 app.include_router(vision_router, dependencies=[Depends(verify_token)])
 app.include_router(audit_router, dependencies=[Depends(verify_token)])
 app.include_router(legacy_router)
+
+# --- 📁 Static Files (Web UI) ---
+if STATIC_DIR.exists():
+    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+    
+    @app.get("/", include_in_schema=False)
+    async def serve_ui():
+        """Serve the Web UI at root"""
+        return FileResponse(STATIC_DIR / "index.html")
 
 
 # --- ❌ グローバルエラーハンドラ ---

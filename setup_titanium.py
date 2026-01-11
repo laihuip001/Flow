@@ -41,6 +41,7 @@ DEPENDENCIES = [
     "python-dotenv>=1.0.0",
     "sqlalchemy>=2.0.0",
     "requests>=2.28.0",
+    "aiofiles>=23.0.0",  # Required for FastAPI StaticFiles
 ]
 
 # PC専用 (Termuxではスキップ)
