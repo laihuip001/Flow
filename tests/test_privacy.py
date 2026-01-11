@@ -88,4 +88,40 @@ class TestPrivacyScanner:
         text = "〒100-0001 東京都千代田区"
         masked, _ = mask_pii(text)
         assert "100-0001" not in masked
-        # Not masking address text yet, only ZIP
+
+    # v4.1 新パターンテスト
+    def test_new_api_key_patterns(self):
+        """gsk_, glpat-, Bearer トークンの検出"""
+        keys = [
+            "gsk_1234567890abcdef1234567890abcdef",
+            "glpat-1234567890abcdef1234567890",
+            "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6",
+        ]
+        for k in keys:
+            masked, _ = mask_pii(f"Token: {k}")
+            assert k not in masked, f"Failed to mask: {k}"
+
+    def test_password_pattern(self):
+        """password=, secret: 形式の検出"""
+        patterns = [
+            "password=mysecretpass123",
+            "secret: my_api_secret_key",
+            "TOKEN=abcdefgh12345678",
+        ]
+        for p in patterns:
+            masked, _ = mask_pii(f"Config: {p}")
+            # パスワード値がマスクされているか確認
+            assert "[PII_" in masked, f"Failed to mask: {p}"
+
+    def test_japanese_address_full(self):
+        """日本住所パターンの検出"""
+        addresses = [
+            "東京都渋谷区",
+            "大阪府大阪市",
+            "北海道札幌市",
+            "神奈川県横浜市",
+        ]
+        for addr in addresses:
+            masked, _ = mask_pii(f"住所: {addr}")
+            assert addr not in masked, f"Failed to mask: {addr}"
+

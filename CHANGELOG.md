@@ -17,25 +17,50 @@ AI Clipboard Pro の進化の経緯
 
 ## 📅 バージョン履歴
 
-### v3.0.1 - Production Ready 🆕
+### v4.0 - Seasoning Spectrum 🆕
+
+**「0-100の連続スペクトラムで下処理を制御」**
+
+#### ✨ Core Changes
+
+- **Seasoning Spectrum:** 離散スタイル（business/casual等）を廃止し、0-100連続値に移行
+  - Light (0-40): 誤字修正のみ、素材を最大限活かす
+  - Medium (41-70): 標準的な構造整理
+  - Rich (71-90): 積極的な補完・強化
+  - Deep (91-100): 深い文脈理解、インキュベーション
+- **SeasoningManager:** 新規クラス。レベルに応じたシステムプロンプト生成
+- **PII Masking:** `mask_pii/unmask_pii` でAPI送信前にPIIをプレースホルダに置換
+
+#### 🔧 Architecture
+
+- **CoreProcessor:** 統合処理クラス（Gemini API呼び出し + マスク処理）
+- **日本語プロンプト最適化:** 日本語入力には日本語指示で精度向上
+
+---
+
+### v3.0.1 - Production Ready
 
 **「壊れない道具への進化」**
 
 #### 🛡️ Security
+
 - **Bearer Token認証:** `/process` と `/prefetch` に認証機構を追加
 - **ログ浄化:** 入力テキストをハッシュ化し、PIIのログ出力を防止
 - **Safety Filterハンドリング:** Geminiのブロック理由を適切にエラーレスポンスで返却
 
 #### ✨ New Features
+
 - **`GET /healthz`:** 詳細ヘルスチェック（監視ツール向け）
 - **`GET /styles`:** 利用可能なスタイル一覧
 - **`StyleManager`:** 5つのプリセットスタイル（business/casual/summary/english/proofread）
 
 #### 🔧 Architecture
+
 - **アプリ名依存排除:** `ContextBallast` → `StyleManager` へ簡素化
 - **ハイブリッドモード設計:** ローカル/クラウドの切り替え基盤
 
 #### 📚 Documentation
+
 - `SECURITY.md` - セキュリティガイド
 - `V3_CLIENT_SETUP.md` - クライアント設定ガイド
 - `test_v3.py` - 自動検証テストスイート

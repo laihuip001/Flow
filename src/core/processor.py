@@ -191,6 +191,8 @@ class CoreProcessor:
             else:
                 masked_text = req.text  # そのまま送信（速度最優先）
                 pii_mapping = {}
+                # v4.1: 開発者向け警告
+                logger.warning("⚠️ PRIVACY_MODE=False: PIIマスキング無効。本番環境では有効化推奨。")
             
             # 2. Model Selection
             model_name = self._select_model(masked_text, req.seasoning)
