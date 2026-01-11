@@ -16,10 +16,10 @@ _conf_key = settings.GEMINI_API_KEY.strip()
 
 if _env_key:
     _api_client = genai.Client(api_key=_env_key)
-    print(f"🔐 API Key configured from environment variable ({_env_key[:4]}...)")
+    print("🔐 API Key configured from environment variable (***...)")
 elif _conf_key:
     _api_client = genai.Client(api_key=_conf_key)
-    print(f"🔐 API Key configured from settings ({_conf_key[:4]}...)")
+    print("🔐 API Key configured from settings (***...)")
 else:
     print("⚠️ API Key NOT configured. Please check .env file.")
 

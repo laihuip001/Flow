@@ -37,7 +37,7 @@ DEPENDENCIES = [
     "uvicorn>=0.23.0",
     "pydantic>=2.0.0",
     "pydantic-settings>=2.0.0",
-    "google-generativeai>=0.3.0",
+    "google-genai>=1.0.0",
     "python-dotenv>=1.0.0",
     "sqlalchemy>=2.0.0",
     "requests>=2.28.0",
@@ -129,6 +129,12 @@ def step_4_database():
         from src.infra.database import init_db
         init_db()
         log("Database initialized", "OK")
+        
+        # TEALS Audit DB Initialization
+        log("Initializing Audit Database...", "INFO")
+        from src.infra.audit import get_audit_manager
+        get_audit_manager() # Initialize the singleton and create tables
+        log("Audit Database initialized", "OK")
     except Exception as e:
         log(f"Database init failed: {e}", "ERROR")
 

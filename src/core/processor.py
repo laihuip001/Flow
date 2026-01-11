@@ -12,10 +12,11 @@ import hashlib
 from sqlalchemy.orm import Session
 from .models import TextRequest, PrefetchCache
 from datetime import datetime
-import asyncio
 import logging
+from typing import List, Optional
 
 # --- Dependencies ---
+from .types import ProcessingResult, DiffLine, ScanResult, ProcessingSuccess, ProcessingError
 from .privacy import PrivacyScanner, mask_pii, unmask_pii
 from .gemini import (
     is_api_configured,
@@ -35,7 +36,7 @@ from .seasoning import SeasoningManager
 
 # --- Utilities ---
 def get_text_hash(text: str) -> str:
-    return hashlib.md5(text.encode()).hexdigest()
+    return hashlib.sha256(text.encode()).hexdigest()[:32]
 
 def sanitize_log(text: str) -> str:
     """ログ用にテキストをサニタイズ（PII除去）"""
@@ -45,7 +46,7 @@ def sanitize_log(text: str) -> str:
     text_hash = get_text_hash(text)[:8]
     return f"[text:{text_hash}...len={len(text)}]"
 
-def generate_diff(original: str, result: str) -> list:
+def generate_diff(original: str, result: str) -> List[DiffLine]:
     """元テキストと変換後テキストの差分を生成"""
     import difflib
     original_lines = original.splitlines(keepends=True)
@@ -138,7 +139,7 @@ class CoreProcessor:
             db.commit()
 
 
-    async def process(self, req: TextRequest, db: Session = None) -> dict:
+    async def process(self, req: TextRequest, db: Session = None) -> ProcessingResult:
         """
         メイン処理パイプライン
         1. Sanitize Log
@@ -158,7 +159,7 @@ class CoreProcessor:
         logger.info(f"📩 Processing: {sanitize_log(req.text)} seasoning={req.seasoning}")
 
         # --- Sub-function: Cache Fallback ---
-        def try_cache_fallback() -> dict | None:
+        def try_cache_fallback() -> Optional[ProcessingSuccess]:
             if db is None:
                 return None
             cache = db.query(PrefetchCache).filter(PrefetchCache.hash_id == text_hash).first()
@@ -167,7 +168,12 @@ class CoreProcessor:
                 cached_result = cache.results[cache_key]
                 if not cached_result.startswith("Error:"):
                     logger.info(f"📦 Cache Hit: {sanitize_log(cached_result)}")
-                    return {"result": cached_result, "seasoning": req.seasoning, "from_cache": True}
+                    return {
+                        "result": cached_result, 
+                        "seasoning": req.seasoning, 
+                        "from_cache": True,
+                        "model_used": None
+                    }
             return None
 
         try:
@@ -186,11 +192,30 @@ class CoreProcessor:
                 if pii_mapping:
                     final_result = unmask_pii(final_result, pii_mapping)
                 
+                # --- TEALS Audit Logging ---
+                try:
+                    from src.infra.audit import get_audit_manager
+                    audit = get_audit_manager()
+                    # Calculate simplified processing time (can be improved)
+                    # C-3: user_id is missing in Core layer request, use default for now. 
+                    # Improvement: Pass user_id in TextRequest or method arg.
+                    audit.log_processing(
+                        user_id="anonymous", # Placeholder until C-3 fix in API layer propagation
+                        input_text=masked_text, # Log masked text for strict privacy
+                        output_text=final_result,
+                        seasoning=req.seasoning,
+                        ai_model=model_name
+                    )
+                except Exception as e:
+                    logger.warning(f"⚠️ Audit logging failed: {e}")
+                # ---------------------------
+
                 logger.info(f"✅ Success: {sanitize_log(final_result)}")
                 return {
                     "result": final_result, 
                     "seasoning": req.seasoning, 
-                    "model_used": model_name
+                    "model_used": model_name,
+                    "from_cache": False
                 }
             else:
                 logger.warning(f"⚠️ API Failed: {result['error']}")

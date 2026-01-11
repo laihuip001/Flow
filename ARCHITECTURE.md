@@ -38,6 +38,14 @@ graph TD
         ServerMain["run_server.py<br>(Entry Point)"]
         FastAPI["src/api<br>(REST API)"]
     end
+    
+    %% ==========================
+    %% 4. THE AUDITOR (TEALS)
+    %% ==========================
+    subgraph "🛡️ src/infra/teals (The Auditor)"
+        AuditManager["AuditManager"]
+        AuditDB[(Audit DB)]
+    end
 
     %% --- CONNECTIONS ---
     AppMain --> FletUI
@@ -52,17 +60,24 @@ graph TD
     
     Processor --> Session
     Session --> DB
+    
+    %% Audit Connections
+    Processor --> AuditManager
+    AuditManager --> AuditDB
+    FastAPI --> AuditManager
 
     %% Styles
     classDef core fill:#7e22ce,stroke:#fff,color:#fff;
     classDef infra fill:#3b82f6,stroke:#fff,color:#fff;
     classDef app fill:#10b981,stroke:#fff,color:#fff;
     classDef api fill:#f59e0b,stroke:#fff,color:#000;
+    classDef audit fill:#ef4444,stroke:#fff,color:#fff;
 
     class Processor,Privacy,Gemini,Styles core;
     class DB,Session infra;
     class AppMain,FletUI app;
     class ServerMain,FastAPI api;
+    class AuditManager,AuditDB audit;
 ```
 
 ---
@@ -84,6 +99,8 @@ graph TD
 データの永続化を担当します。
 
 * `database.py`: DB接続セッションの管理。
+* `audit.py` & `teals/`: **TEALS** (Tamper-Evident Audit Log System) による改ざん検知可能な監査ログ基盤。
+  * `audit_log.db` に保管され、ハッシュチェーン技術でデータの完全性を保証します。
 
 ### `src/app` (The Face) 📱
 

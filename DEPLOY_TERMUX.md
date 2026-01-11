@@ -112,6 +112,22 @@ adb shell device_config put activity_manager max_phantom_processes 2147483647
 
 ---
 
+## 7. 監査ログ (Audit Logs)
+
+Flow AI は全てのAI処理を改ざん不可能な形式で記録します。
+
+```bash
+# ログ確認
+curl http://localhost:8000/audit/logs
+
+# 改ざん検証
+curl -X POST http://localhost:8000/audit/verify
+```
+
+ログデータは `data/audit_log.db` に保存されます。バックアップ推奨。
+
+---
+
 ## トラブルシューティング
 
 | 症状 | 解決策 |

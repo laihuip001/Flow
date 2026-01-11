@@ -39,3 +39,46 @@ jobs:
             exit 1
           fi
           echo "✅ No secrets found."
+
+  termux-compat:
+    runs-on: ubuntu-latest
+    name: Termux Compatibility Check
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Check forbidden imports
+        run: |
+          echo "🔍 Checking for Termux-incompatible imports..."
+          FORBIDDEN="pandas|numpy|scipy|lxml|cv2|PIL|tensorflow|torch"
+          if grep -rE "^import ($FORBIDDEN)|^from ($FORBIDDEN)" src/ --include="*.py"; then
+            echo "❌ TERMUX COMPAT: Forbidden library import detected!"
+            exit 1
+          fi
+          echo "✅ No forbidden imports found."
+      
+      - name: Validate requirements-termux.txt
+        run: |
+          echo "📦 Validating Termux requirements..."
+          pip install -r requirements-termux.txt --dry-run
+          echo "✅ All dependencies are installable."
+      
+      - name: Check Pure Python
+        run: |
+          echo "🐍 Checking for C extension dependencies..."
+          pip install -r requirements-termux.txt
+          python -c "
+          import pkg_resources
+          heavy = ['numpy', 'pandas', 'scipy', 'lxml', 'pillow']
+          installed = [p.key for p in pkg_resources.working_set]
+          violations = [h for h in heavy if h in installed]
+          if violations:
+              print(f'❌ Heavy libs found: {violations}')
+              exit(1)
+          print('✅ Pure Python stack verified.')
+          "
