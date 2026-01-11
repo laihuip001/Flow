@@ -87,31 +87,35 @@ class TestPIIMasking:
 
 
 class TestSeasoningManager:
-    """SeasoningManager テスト (v4.0)"""
+    """SeasoningManager テスト (v4.1 日本語版)"""
     
-    def test_salt_prompt(self):
-        """Salt (0-30) プロンプト取得"""
+    def test_light_prompt(self):
+        """Light (0-40) プロンプト取得"""
         prompt = SeasoningManager.get_system_prompt(10)
         
-        assert "Text Cleaner" in prompt
-        assert "Fix typos" in prompt
+        # 日本語プロンプトに変更: 誤字脱字修正、元の意図を維持
+        assert "入力文を整形" in prompt
+        assert "誤字脱字" in prompt
     
-    def test_sauce_prompt(self):
-        """Sauce (31-70) プロンプト取得"""
+    def test_medium_prompt(self):
+        """Medium (41-70) プロンプト取得"""
         prompt = SeasoningManager.get_system_prompt(50)
         
-        assert "Text Editor" in prompt
-        assert "Clarify" in prompt
+        # プロンプトとして整形、構造を整理
+        assert "プロンプトとして整形" in prompt
+        assert "構造を整理" in prompt
     
-    def test_spice_prompt(self):
-        """Spice (71-100) プロンプト取得"""
-        prompt = SeasoningManager.get_system_prompt(90)
+    def test_rich_prompt(self):
+        """Rich (71-90) プロンプト取得"""
+        prompt = SeasoningManager.get_system_prompt(80)
         
-        assert "Text Enhancer" in prompt
-        assert "Elaborate" in prompt
+        # 入力文を強化、不足している情報を補完
+        assert "強化" in prompt
+        assert "補完" in prompt
     
     def test_level_label(self):
-        """レベルラベル取得"""
-        assert SeasoningManager.get_level_label(10) == "Salt (Minimal)"
-        assert SeasoningManager.get_level_label(50) == "Sauce (Standard)"
-        assert SeasoningManager.get_level_label(90) == "Spice (Rich)"
+        """レベルラベル取得 (日本語版)"""
+        assert SeasoningManager.get_level_label(10) == "Light（軽め）"
+        assert SeasoningManager.get_level_label(50) == "Medium（標準）"
+        assert SeasoningManager.get_level_label(80) == "Rich（濃いめ）"
+        assert SeasoningManager.get_level_label(95) == "Deep（深い）"
