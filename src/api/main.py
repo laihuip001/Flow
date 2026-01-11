@@ -338,7 +338,7 @@ def analyze_text(req: TextRequest):
 _clipboard_history: list = []
 MAX_HISTORY_SIZE = 10
 
-@app.post("/history/add", tags=["P2 Features"])
+@app.post("/history/add", tags=["P2 Features"], dependencies=[Depends(verify_token)])
 def add_to_history(req: TextRequest):
     """
     クリップボード履歴に追加（文脈の継続性）
@@ -359,7 +359,7 @@ def add_to_history(req: TextRequest):
     
     return {"status": "added", "history_size": len(_clipboard_history)}
 
-@app.get("/history", tags=["P2 Features"])
+@app.get("/history", tags=["P2 Features"], dependencies=[Depends(verify_token)])
 def get_history():
     """クリップボード履歴を取得"""
     return {"history": _clipboard_history, "size": len(_clipboard_history)}
