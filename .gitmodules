@@ -1,0 +1,3 @@
+[submodule "src/infra/teals"]
+	path = src/infra/teals
+	url = https://github.com/laihuip001/TEALS.git

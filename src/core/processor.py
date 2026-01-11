@@ -88,6 +88,10 @@ class CoreProcessor:
 
     def _select_model(self, text: str, seasoning: int) -> str:
         """CostRouter: Speed is priority. Use Flash by default."""
+        # Umami (Seasoning > 90) ALWAYS uses Smart Model for deep context
+        if seasoning > 90:
+            return settings.MODEL_SMART # Pro
+            
         # Only use Pro model for very high seasoning (heavy reconstruction) and long text
         if len(text) > 1000 and seasoning >= 90:
             return settings.MODEL_SMART # Pro
@@ -140,15 +144,19 @@ class CoreProcessor:
 
     async def process(self, req: TextRequest, db: Session = None) -> dict:
         """
-        メイン処理パイプライン
+        メイン処理パイプライン (v4.1 速度最優先)
         1. Sanitize Log
         2. Check Cache
-        3. Mask PII
+        3. Mask PII (PRIVACY_MODE=True時のみ)
         4. Select Model
         5. API Call
-        6. Unmask PII
+        6. Unmask PII (PRIVACY_MODE=True時のみ)
         """
-        system_prompt = SeasoningManager.get_system_prompt(req.seasoning)
+        # ユーザーカスタムプロンプトを統合
+        system_prompt = SeasoningManager.get_system_prompt(
+            req.seasoning, 
+            user_prompt=settings.USER_SYSTEM_PROMPT
+        )
         config = {
             "system": system_prompt,
             "params": {"temperature": 0.3}
@@ -171,8 +179,12 @@ class CoreProcessor:
             return None
 
         try:
-            # 1. PII Masking
-            masked_text, pii_mapping = mask_pii(req.text)
+            # 1. PII Masking (PRIVACY_MODE=False時はスキップ → 速度向上)
+            if settings.PRIVACY_MODE:
+                masked_text, pii_mapping = mask_pii(req.text)
+            else:
+                masked_text = req.text  # そのまま送信（速度最優先）
+                pii_mapping = {}
             
             # 2. Model Selection
             model_name = self._select_model(masked_text, req.seasoning)
@@ -181,9 +193,9 @@ class CoreProcessor:
             result = await execute_gemini(masked_text, config, model=model_name)
 
             if result["success"]:
-                # 4. PII Unmasking
+                # 4. PII Unmasking (PRIVACY_MODE=True時のみ)
                 final_result = result["result"]
-                if pii_mapping:
+                if settings.PRIVACY_MODE and pii_mapping:
                     final_result = unmask_pii(final_result, pii_mapping)
                 
                 logger.info(f"✅ Success: {sanitize_log(final_result)}")

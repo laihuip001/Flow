@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Text, DateTime, JSON, Integer
+from sqlalchemy import Column, String, Text, DateTime, JSON, Integer, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from pydantic import BaseModel, Field
 from datetime import datetime
@@ -32,6 +32,7 @@ class SyncJob(Base):
     status = Column(String, default="pending") # pending, processing, completed, failed
     created_at = Column(DateTime, default=datetime.utcnow)
     retry_count = Column(Integer, default=0)
+    is_favorite = Column(Boolean, default=False) # v4.1 Favorite Persistence
 
 # API Models
 class TextRequest(BaseModel):

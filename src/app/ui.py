@@ -66,10 +66,11 @@ class SeasoningBadge(ft.Container):
         color = ft.Colors.BLUE_200 # Salt
         if level > 30: color = ft.Colors.ORANGE_300 # Sauce
         if level > 70: color = ft.Colors.RED_400 # Spice
+        if level > 90: color = ft.Colors.PURPLE_300 # Deep (Umami)
 
         self.content = ft.Row(
             [
-                ft.Icon(ft.Icons.soup_kitchen, size=14, color=color),
+                ft.Icon(ft.Icons.SOUP_KITCHEN, size=14, color=color),
                 ft.Text(f"{label} ({level}%)", size=12, color=ft.Colors.WHITE),
             ],
             spacing=6,
@@ -80,13 +81,16 @@ class SeasoningBadge(ft.Container):
         self.border = ft.border.all(1, ft.Colors.with_opacity(0.5, color))
 
 class SyncJobItem(ft.Container):
-    """List Item for History View"""
-    def __init__(self, job, on_click=None):
+    """
+    List Item for History View
+    v4.1: お気に入り機能 (Star Icon) 追加
+    """
+    def __init__(self, job, on_click=None, on_favorite_click=None):
         super().__init__()
         self.job = job # Dict or Object
         result_preview = job.get("result", "") or ""
-        if len(result_preview) > 500: # Limit only very long text
-            result_preview = result_preview[:500] + "..."
+        # if len(result_preview) > 500: # Limit only very long text
+        #     result_preview = result_preview[:500] + "..."
         
         status_color = {
             "pending": ft.Colors.ORANGE,
@@ -98,23 +102,35 @@ class SyncJobItem(ft.Container):
         seasoning_val = job.get("seasoning", 30)
         from src.core.seasoning import SeasoningManager
         seasoning_label = SeasoningManager.get_level_label(seasoning_val)
+        
+        is_fav = job.get("is_favorite", False)
 
         self.content = ft.Column(
             [
                 ft.Row(
                     [
                         ft.Text(job.get("created_at_fmt", ""), color=ft.Colors.WHITE54, size=11),
-                        ft.Container(
-                            content=ft.Text(
-                                f"{seasoning_label} ({seasoning_val}%)", 
-                                size=10, 
-                                color=ft.Colors.WHITE, 
-                                weight=ft.FontWeight.BOLD
+                        ft.Row([
+                            ft.Container(
+                                content=ft.Text(
+                                    f"{seasoning_label} ({seasoning_val}%)", 
+                                    size=10, 
+                                    color=ft.Colors.WHITE, 
+                                    weight=ft.FontWeight.BOLD
+                                ),
+                                bgcolor=COLOR_PRIMARY,
+                                padding=ft.padding.symmetric(horizontal=8, vertical=2),
+                                border_radius=4,
                             ),
-                            bgcolor=COLOR_PRIMARY,
-                            padding=ft.padding.symmetric(horizontal=8, vertical=2),
-                            border_radius=4,
-                        ),
+                            # Star Icon logic
+                            ft.IconButton(
+                                icon=ft.Icons.STAR if is_fav else ft.Icons.STAR_BORDER,
+                                icon_color=ft.Colors.YELLOW_400 if is_fav else ft.Colors.GREY_400,
+                                icon_size=16,
+                                on_click=lambda e: on_favorite_click(job["id"]) if on_favorite_click else None,
+                                tooltip="お気に入りに保存（消えません）"
+                            )
+                        ], spacing=4)
                     ],
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 ),
@@ -156,8 +172,26 @@ class SeasoningSlider(ft.Column):
         )
         self.label = ft.Text("Seasoning Level: Salt (30%)", color=COLOR_TEXT_DIM, size=12)
         
+        # v4.1: Info Icon for Prompt Visualization
+        from src.core.seasoning import SeasoningManager
+        self.info_icon = ft.IconButton(
+            icon=ft.Icons.INFO_OUTLINE, 
+            icon_color=ft.Colors.WHITE54, 
+            icon_size=16,
+            tooltip=SeasoningManager.get_system_prompt(30) # Initial tooltip
+        )
+
+        header_row = ft.Row(
+            [
+                ft.Text("Seasoning (味付け)", size=14, weight=ft.FontWeight.BOLD),
+                self.info_icon
+            ],
+            alignment=ft.MainAxisAlignment.START,
+            spacing=4
+        )
+
         self.controls = [
-            ft.Text("Seasoning (味付け)", size=14, weight=ft.FontWeight.BOLD),
+            header_row,
             self.slider,
             ft.Container(content=self.label, alignment=ft.Alignment(0, 0))
         ]
@@ -177,9 +211,17 @@ class SeasoningSlider(ft.Column):
 
     def _update_label(self, val: int):
         from src.core.seasoning import SeasoningManager
+        from src.core.config import settings # For user_prompt
+        
         lbl = SeasoningManager.get_level_label(val)
         self.label.value = f"Seasoning Level: {lbl} ({val}%)"
+        
+        # Update tooltip dynamically
+        prompt = SeasoningManager.get_system_prompt(val, user_prompt=settings.USER_SYSTEM_PROMPT)
+        self.info_icon.tooltip = f"現在の指示内容:\n\n{prompt}"
+        
         self.label.update()
+        self.info_icon.update()
     
     @property
     def value(self):

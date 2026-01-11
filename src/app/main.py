@@ -7,6 +7,7 @@ import keyboard
 import pyperclip
 import time
 from datetime import datetime
+from sqlalchemy import text # For manual migration
 
 # Path setup to import from root
 # Assumes running from project root via `python -m src.app.main`
@@ -34,7 +35,7 @@ core_processor = CoreProcessor()
 HOTKEY = "ctrl+alt+x"
 
 async def main(page: ft.Page):
-    page.title = "Flow AI v1.0"
+    page.title = "Flow AI v4.1" # Version Bump
     page.theme = TitaniumTheme.theme
     page.theme_mode = ft.ThemeMode.DARK
     page.window_width = 450
@@ -44,6 +45,27 @@ async def main(page: ft.Page):
     # Enable window visibility toggling
     page.window_visible = True
     page.window_prevent_close = True # Minimize instead of close
+
+    # --- v4.1 Startup: Manual Migration for is_favorite ---
+    # Alembic導入前のため、起動時にカラム有無をチェックして追加する
+    def ensure_db_schema():
+        db = SessionLocal()
+        try:
+            # Check if column exists
+            result = db.execute(text("PRAGMA table_info(sync_jobs)")).fetchall()
+            columns = [row[1] for row in result]
+            if "is_favorite" not in columns:
+                print("🔧 Migrating DB: Adding is_favorite column...")
+                db.execute(text("ALTER TABLE sync_jobs ADD COLUMN is_favorite BOOLEAN DEFAULT 0"))
+                db.commit()
+                print("✅ Migration Done.")
+        except Exception as e:
+            print(f"⚠️ Migration warning: {e}")
+        finally:
+            db.close()
+    
+    # Run migration synchronously on start
+    ensure_db_schema()
 
     def on_window_event(e):
         if e.data == "close":
@@ -87,6 +109,45 @@ async def main(page: ft.Page):
         "jobs": [] 
     }
     
+    # --- Load History (Favorites + Recent) ---
+    def load_initial_history():
+        db = SessionLocal()
+        try:
+            # 1. Get Favorites
+            favorites = db.query(SyncJob).filter(SyncJob.is_favorite == True).order_by(SyncJob.created_at.desc()).all()
+            
+            # 2. Get Recent (non-favorite) - limit 20
+            recents = db.query(SyncJob).filter(SyncJob.is_favorite == False).order_by(SyncJob.created_at.desc()).limit(20).all()
+            
+            # Merge: Favorites first, then Recents (or chronological mix? Let's just list favorites at top for now or mix by date)
+            # User likely wants chronological, but favorites persisted.
+            # Let's simple combine and sort by date for the view.
+            
+            all_jobs = favorites + recents
+            # Sort desc by date
+            all_jobs.sort(key=lambda x: x.created_at, reverse=True)
+            
+            state["jobs"] = [
+                {
+                    "id": j.id,
+                    "text": j.text,
+                    "seasoning": j.seasoning,
+                    "status": j.status,
+                    "result": j.result,
+                    "created_at_fmt": j.created_at.strftime("%H:%M:%S") if j.created_at else "",
+                    "is_favorite": j.is_favorite  # Load state
+                } 
+                for j in all_jobs
+            ]
+            print(f"Loaded {len(state['jobs'])} items (Favs: {len(favorites)})")
+        except Exception as e:
+            print(f"Error loading history: {e}")
+        finally:
+            db.close()
+
+    # Load on start
+    load_initial_history()
+
     # --- UI Components ---
 
     def on_text_change(e):
@@ -122,9 +183,9 @@ async def main(page: ft.Page):
         page.snack_bar.open = True
         page.update()
 
-    btn_salt = ft.ElevatedButton("Salt (10)", on_click=lambda e: on_preset_click(10), bgcolor=ft.Colors.BLUE_900, color=ft.Colors.WHITE)
-    btn_sauce = ft.ElevatedButton("Sauce (50)", on_click=lambda e: on_preset_click(50), bgcolor=ft.Colors.ORANGE_900, color=ft.Colors.WHITE)
-    btn_spice = ft.ElevatedButton("Spice (90)", on_click=lambda e: on_preset_click(90), bgcolor=ft.Colors.RED_900, color=ft.Colors.WHITE)
+    btn_salt = ft.ElevatedButton("Light (10)", on_click=lambda e: on_preset_click(10), bgcolor=ft.Colors.BLUE_900, color=ft.Colors.WHITE)
+    btn_sauce = ft.ElevatedButton("Medium (50)", on_click=lambda e: on_preset_click(50), bgcolor=ft.Colors.ORANGE_900, color=ft.Colors.WHITE)
+    btn_spice = ft.ElevatedButton("Rich (90)", on_click=lambda e: on_preset_click(90), bgcolor=ft.Colors.RED_900, color=ft.Colors.WHITE)
 
     presets_row = ft.Row(
         [btn_salt, btn_sauce, btn_spice],
@@ -176,7 +237,8 @@ async def main(page: ft.Page):
             "seasoning": state["seasoning"], 
             "status": "pending",
             "created_at_fmt": datetime.now().strftime("%H:%M"),
-            "result": ""
+            "result": "",
+            "is_favorite": False
         }
         state["jobs"].insert(0, new_job)
         update_history_list()
@@ -214,9 +276,42 @@ async def main(page: ft.Page):
     # --- History View Components ---
     history_list = ft.Column(scroll=ft.ScrollMode.AUTO, expand=True)
 
+    def toggle_favorite(job_id):
+        """Toggle favorite status in DB and Local State"""
+        print(f"⭐️ Toggling favorite for {job_id}")
+        db = SessionLocal()
+        try:
+            job = db.query(SyncJob).filter(SyncJob.id == job_id).first()
+            if job:
+                # Toggle
+                new_status = not job.is_favorite
+                job.is_favorite = new_status
+                db.commit()
+                
+                # Update Local State
+                for j in state["jobs"]:
+                    if j["id"] == job_id:
+                        j["is_favorite"] = new_status
+                        break
+                
+                update_history_list()
+                page.update()
+                
+                msg = "お気に入りに保存しました" if new_status else "お気に入りを解除しました"
+                page.snack_bar = ft.SnackBar(ft.Text(msg), duration=1000)
+                page.snack_bar.open = True
+        except Exception as e:
+            print(f"Error toggling favorite: {e}")
+        finally:
+            db.close()
+
     def update_history_list():
         history_list.controls = [
-            SyncJobItem(job, on_click=lambda e: print(f"Clicked {job['id']}")) for job in state["jobs"]
+            SyncJobItem(
+                job, 
+                on_click=lambda e: print(f"Clicked {job['id']}"),
+                on_favorite_click=toggle_favorite # Pass callback
+            ) for job in state["jobs"]
         ]
 
     async def run_worker_task(job_id):
@@ -241,6 +336,9 @@ async def main(page: ft.Page):
             print(f"Worker Error: {e}")
         finally:
             db.close()
+    
+    # Initialize history list UI
+    update_history_list()
 
     history_view = ft.Container(
         content=history_list,
