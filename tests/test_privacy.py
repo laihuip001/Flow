@@ -1,6 +1,6 @@
 
 import pytest
-from src.core.privacy import PrivacyScanner, mask_pii, unmask_pii, PrivacyScanner
+from src.core.privacy import PrivacyScanner, mask_pii, unmask_pii
 
 class TestPrivacyScanner:
     """Zero-Trust Privacy Scanner Tests"""
@@ -30,6 +30,20 @@ class TestPrivacyScanner:
         masked, _ = mask_pii(f"Pay with {cc}")
         assert cc not in masked
         assert "PII" in masked
+
+    def test_overlap_credit_card_my_number(self):
+        """
+        Verify that a Credit Card (16 digits) is not partially masked as My Number (12 digits).
+        Prior to optimization, My Number (12) would match the first 12 digits of CC (16), leaving 4 digits exposed.
+        """
+        cc = "1234-5678-9012-3456"
+        masked, mapping = mask_pii(f"Payment: {cc}")
+
+        # Should be masked as one PII entity
+        assert cc not in masked
+        assert "[PII_0]-3456" not in masked
+        # The whole CC number should be in the mapping
+        assert list(mapping.values())[0] == cc
 
     def test_api_keys(self):
         keys = [
