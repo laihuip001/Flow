@@ -78,6 +78,7 @@ from src.api.routes import (
     set_safety_processor,
     set_features_processor,
     audit_router,
+    vocab_router,
 )
 
 # Inject processor instances
@@ -92,6 +93,7 @@ app.include_router(safety_router)  # No auth for scan
 app.include_router(features_router, dependencies=[Depends(verify_token)])
 app.include_router(vision_router, dependencies=[Depends(verify_token)])
 app.include_router(audit_router, dependencies=[Depends(verify_token)])
+app.include_router(vocab_router, dependencies=[Depends(verify_token)])  # v4.1
 app.include_router(legacy_router)
 
 # --- 📁 Static Files (Web UI) ---

@@ -8,6 +8,7 @@ from .features import router as features_router, set_processor as set_features_p
 from .vision import router as vision_router
 from .legacy import router as legacy_router
 from .audit import router as audit_router
+from .vocab import router as vocab_router
 
 __all__ = [
     "health_router",
@@ -17,7 +18,9 @@ __all__ = [
     "vision_router",
     "legacy_router",
     "audit_router",
+    "vocab_router",
     "set_core_processor",
     "set_safety_processor", 
     "set_features_processor",
 ]
+

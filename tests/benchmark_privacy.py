@@ -1,6 +1,6 @@
 import time
 import textwrap
-from privacy import mask_pii
+from src.core.privacy import mask_pii
 
 # 100kb text with some PII
 dummy_text = textwrap.dedent("""
