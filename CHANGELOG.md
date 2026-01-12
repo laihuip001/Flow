@@ -17,12 +17,11 @@ AI Clipboard Pro の進化の経緯
 
 ## 📅 バージョン履歴
 
-### v4.0 - Seasoning Spectrum 🆕
+### v4.0.0 - Seasoning Update 🆕
 
-**「0-100の連続スペクトラムで下処理を制御」**
+**「味付けの自由度：0-100の連続スペクトラムへ」**
 
 #### ✨ Core Changes
-
 - **Seasoning Spectrum:** 離散スタイル（business/casual等）を廃止し、0-100連続値に移行
   - Light (0-40): 誤字修正のみ、素材を最大限活かす
   - Medium (41-70): 標準的な構造整理
@@ -30,11 +29,18 @@ AI Clipboard Pro の進化の経緯
   - Deep (91-100): 深い文脈理解、インキュベーション
 - **SeasoningManager:** 新規クラス。レベルに応じたシステムプロンプト生成
 - **PII Masking:** `mask_pii/unmask_pii` でAPI送信前にPIIをプレースホルダに置換
+- **TEALS Submodule:** 透明性・説明可能性のための検証モジュール追加
+- **Hash Integrity:** クリップボード内容のハッシュ整合性チェック
 
 #### 🔧 Architecture
-
+- `seasoning.py` - 味付けロジックの分離
+- `infra/teals/` - 検証モジュール群 (`tests/test_teals.py` 追加)
 - **CoreProcessor:** 統合処理クラス（Gemini API呼び出し + マスク処理）
 - **日本語プロンプト最適化:** 日本語入力には日本語指示で精度向上
+
+#### 📚 Documentation
+- `.gemini/rules.md` - dev-rules参照追加
+- `CHANGELOG.md` - v4.0.0 エントリ詳細化
 
 ---
 
