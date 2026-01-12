@@ -7,21 +7,30 @@
 ## 前提条件
 
 - Android 7.0以上
-- [Termux](https://f-droid.org/packages/com.termux/) (F-Droid版を推奨)
-- Python 3.10+
-- Git
 - 安定したWi-Fi接続
+- PC不要（スマートフォンのみで完結）
+
+---
+
+## 0. Termuxのインストール
+
+> ⚠️ **Google Play版は非推奨**（古くて動作しません）
+
+1. **F-Droid**をインストール: https://f-droid.org/
+2. F-Droidを開き、検索で「Termux」を探す
+3. Termuxをインストール
+4. Termuxを起動
 
 ---
 
 ## 1. 初期セットアップ
 
 ```bash
-# Termuxパッケージ更新
+# Termuxパッケージ更新（初回は時間がかかります）
 pkg update && pkg upgrade -y
 
 # 必要なパッケージインストール
-pkg install python git curl -y
+pkg install python git nano -y
 
 # リポジトリをクローン
 git clone https://github.com/laihuip001/Flow.git
@@ -32,37 +41,55 @@ cd Flow
 
 ## 2. 環境設定
 
-```bash
-# .env ファイルを作成
-cp .env.example .env
+### 2.1 設定ファイルの作成
 
-# APIキーを設定 (必須)
-vim .env
-# GEMINI_API_KEY=your_api_key_here
+```bash
+cp .env.example .env
 ```
+
+### 2.2 APIキーの設定
+
+**Gemini API Keyの取得方法:**
+1. https://aistudio.google.com/apikey にアクセス
+2. Googleアカウントでログイン
+3. 「Create API Key」をクリック
+4. 表示されたキーをコピー
+
+**設定ファイルの編集:**
+```bash
+# nanoエディタで開く
+nano .env
+```
+
+以下のように編集:
+```
+GEMINI_API_KEY=ここにコピーしたキーを貼り付け
+```
+
+保存: `Ctrl + O` → `Enter` → `Ctrl + X`
 
 ---
 
 ## 3. 起動方法
 
-### A) シンプル起動 (手動)
+### A) 初回・テスト用（手動起動）
 
 ```bash
-# 依存インストール
+# 依存インストール（初回のみ、数分かかります）
 pip install -r requirements-termux.txt
 
 # サーバー起動
 python run_server.py
 ```
 
-### B) 推奨: start_termux.sh (自動venv作成)
+### B) 推奨: 自動セットアップ
 
 ```bash
 chmod +x maintenance/start_termux.sh
 ./maintenance/start_termux.sh
 ```
 
-### C) 本番運用: Titanium Watcher (自動復旧)
+### C) 本番運用: 自動復旧つき
 
 ```bash
 chmod +x maintenance/titanium_watcher.sh
@@ -73,58 +100,48 @@ nohup ./maintenance/titanium_watcher.sh > watcher.log 2>&1 &
 
 ## 4. 動作確認
 
-```bash
-# ヘルスチェック
-curl http://localhost:8000/healthz
+別のTermuxセッション、またはスマホのブラウザで:
 
-# 期待される応答: {"status": "healthy"}
+```
+http://localhost:8000/healthz
+```
+
+期待される応答:
+```json
+{"status": "healthy", ...}
 ```
 
 ---
 
-## 5. 外部アクセス (オプション)
+## 5. 外部アクセス（オプション）
 
-### Cloudflare Tunnel (推奨)
+> これを設定すると、他の端末からもアクセス可能になります
+
+### Cloudflare Tunnel
 
 ```bash
-# cloudflared インストール
 pkg install cloudflared -y
-
-# トンネル作成
 cloudflared tunnel login
 cloudflared tunnel create flow-ai
 cloudflared tunnel route dns flow-ai your-subdomain.yourdomain.com
-
-# 起動
 cloudflared tunnel run flow-ai
 ```
 
+> 💡 Cloudflareの無料アカウントが必要です
+
 ---
 
-## 6. Phantom Process Killer 対策
+## 6. バックグラウンド動作の維持
 
-Androidはバックグラウンドプロセスを停止することがあります。  
-PC接続時に以下のコマンドで無効化できます:
+Androidはバックグラウンドアプリを停止することがあります。
 
+### 対策1: Termuxの通知を常時表示
+Termuxアプリの設定で「Acquire Wakelock」を有効にする
+
+### 対策2: PC接続時（開発者向け）
 ```bash
 adb shell device_config put activity_manager max_phantom_processes 2147483647
 ```
-
----
-
-## 7. 監査ログ (Audit Logs)
-
-Flow AI は全てのAI処理を改ざん不可能な形式で記録します。
-
-```bash
-# ログ確認
-curl http://localhost:8000/audit/logs
-
-# 改ざん検証
-curl -X POST http://localhost:8000/audit/verify
-```
-
-ログデータは `data/audit_log.db` に保存されます。バックアップ推奨。
 
 ---
 
@@ -134,7 +151,8 @@ curl -X POST http://localhost:8000/audit/verify
 |---|---|
 | `pip install` 失敗 | `pkg install build-essential` を先に実行 |
 | ポート8000使用中 | `pkill -f uvicorn` でプロセス停止 |
-| メモリ不足 | `--workers 1` オプションを追加 |
+| メモリ不足 | 他のアプリを終了してから再試行 |
+| `nano`が見つからない | `pkg install nano` |
 
 ---
 
