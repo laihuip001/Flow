@@ -9,11 +9,16 @@ Logic Module - Core processing logic (Refactored for v4.0)
 """
 from .config import settings
 import hashlib
+import uuid
 from sqlalchemy.orm import Session
-from .models import TextRequest, PrefetchCache
+from .models import TextRequest, PrefetchCache, SyncJob
 from datetime import datetime
 import logging
 from typing import List, Optional
+
+# --- Constants (C-4-5 Refactored) ---
+UMAMI_THRESHOLD = 90  # Seasoning > 90 uses Smart Model
+LONG_TEXT_THRESHOLD = 1000  # Characters threshold for model selection
 
 # --- Dependencies ---
 from .types import ProcessingResult, DiffLine, ScanResult, ProcessingSuccess, ProcessingError
@@ -89,20 +94,18 @@ class CoreProcessor:
 
     def _select_model(self, text: str, seasoning: int) -> str:
         """CostRouter: Speed is priority. Use Flash by default."""
-        # Umami (Seasoning > 90) ALWAYS uses Smart Model for deep context
-        if seasoning > 90:
-            return settings.MODEL_SMART # Pro
+        # Umami (Seasoning > threshold) ALWAYS uses Smart Model for deep context
+        if seasoning > UMAMI_THRESHOLD:
+            return settings.MODEL_SMART
             
-        # Only use Pro model for very high seasoning (heavy reconstruction) and long text
-        if len(text) > 1000 and seasoning >= 90:
-            return settings.MODEL_SMART # Pro
-        return settings.MODEL_FAST # Flash (Default for 99% cases)
+        # Pro model for high seasoning + long text
+        if len(text) > LONG_TEXT_THRESHOLD and seasoning >= UMAMI_THRESHOLD:
+            return settings.MODEL_SMART
+        return settings.MODEL_FAST
 
     def create_sync_job(self, req: TextRequest, db: Session) -> str:
         """非同期ジョブを作成してIDを返す (即時応答用)"""
-        import uuid  # Lightweight, kept local for minimal import overhead
         job_id = str(uuid.uuid4())
-        from .models import SyncJob  # Deferred to avoid circular import
         
         job = SyncJob(
             id=job_id,
@@ -117,7 +120,6 @@ class CoreProcessor:
 
     async def process_sync_job(self, job_id: str, db: Session) -> None:
         """バックグラウンドでSyncJobを処理"""
-        from .models import SyncJob
         job = db.query(SyncJob).filter(SyncJob.id == job_id).first()
         if not job: return
 
