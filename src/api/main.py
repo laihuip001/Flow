@@ -79,12 +79,15 @@ from src.api.routes import (
     set_features_processor,
     audit_router,
     vocab_router,
+    sync_router,
+    set_sync_processor,
 )
 
 # Inject processor instances
 set_core_processor(core_processor)
 set_safety_processor(core_processor)
 set_features_processor(core_processor)
+set_sync_processor(core_processor)
 
 # --- Include Routers ---
 app.include_router(health_router)
@@ -94,6 +97,7 @@ app.include_router(features_router, dependencies=[Depends(verify_token)])
 app.include_router(vision_router, dependencies=[Depends(verify_token)])
 app.include_router(audit_router, dependencies=[Depends(verify_token)])
 app.include_router(vocab_router, dependencies=[Depends(verify_token)])  # v4.1
+app.include_router(sync_router, dependencies=[Depends(verify_token)])  # v5.0 Phase 4
 app.include_router(legacy_router)
 
 # --- 📁 Static Files (Web UI) ---

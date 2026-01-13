@@ -136,6 +136,41 @@ class CoreProcessor:
         finally:
             db.commit()
 
+    def process_sync(self, text: str, seasoning: int) -> dict:
+        """
+        遅延同期用の同期処理メソッド (v5.0 Phase 4)
+        SyncManagerから呼び出される。DBセッションは呼び出し側で管理。
+        
+        Args:
+            text: 処理対象テキスト
+            seasoning: 処理レベル
+        
+        Returns:
+            dict: { success: bool, result: str, error: str }
+        """
+        import asyncio
+        from .models import TextRequest
+        
+        try:
+            # Create a TextRequest for internal processing
+            req = TextRequest(text=text, seasoning=seasoning)
+            
+            # Run async process in sync context
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                result = loop.run_until_complete(self.process(req, db=None))
+            finally:
+                loop.close()
+            
+            if "error" in result:
+                return {"success": False, "error": result.get("message", str(result.get("error")))}
+            
+            return {"success": True, "result": result.get("result", "")}
+        
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
 
     async def process(self, req: TextRequest, db: Session = None) -> ProcessingResult:
         """

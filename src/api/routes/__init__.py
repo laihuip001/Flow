@@ -9,6 +9,7 @@ from .vision import router as vision_router
 from .legacy import router as legacy_router
 from .audit import router as audit_router
 from .vocab import router as vocab_router
+from .sync import router as sync_router, set_sync_processor
 
 __all__ = [
     "health_router",
@@ -19,8 +20,11 @@ __all__ = [
     "legacy_router",
     "audit_router",
     "vocab_router",
+    "sync_router",
     "set_core_processor",
     "set_safety_processor", 
     "set_features_processor",
+    "set_sync_processor",
 ]
+
 

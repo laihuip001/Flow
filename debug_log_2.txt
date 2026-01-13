@@ -1,0 +1,17 @@
+Traceback (most recent call last):
+  File "C:\Users\makaron8426\dev\Flow\tools\warmup_cache.py", line 10, in <module>
+    from src.core.processor import CoreProcessor
+  File "C:\Users\makaron8426\dev\Flow\src\core\processor.py", line 25, in <module>
+    from .gemini import GeminiClient, execute_gemini, execute_gemini_stream
+  File "C:\Users\makaron8426\dev\Flow\src\core\gemini.py", line 112, in <module>
+    _default_client = GeminiClient()
+  File "C:\Users\makaron8426\dev\Flow\src\core\gemini.py", line 18, in __init__
+    self._configure()
+    ~~~~~~~~~~~~~~~^^
+  File "C:\Users\makaron8426\dev\Flow\src\core\gemini.py", line 29, in _configure
+    print("\U0001f510 API Key configured from settings (***...)")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\makaron8426\AppData\Local\Programs\Python\Python314\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f510' in position 0: character maps to <undefined>

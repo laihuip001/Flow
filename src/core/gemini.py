@@ -4,9 +4,12 @@ Gemini Client Module - Gemini API呼び出し
 責務: API設定、呼び出し、レスポンス処理
 """
 import os
+import logging
 from google import genai
 from google.genai import types
 from .config import settings
+
+logger = logging.getLogger("gemini_client")
 
 
 class GeminiClient:
@@ -23,12 +26,12 @@ class GeminiClient:
 
         if env_key:
             self.client = genai.Client(api_key=env_key)
-            print("🔐 API Key configured from environment variable (***...)")
+            logger.info("API Key configured from environment variable")
         elif conf_key:
             self.client = genai.Client(api_key=conf_key)
-            print("🔐 API Key configured from settings (***...)")
+            logger.info("API Key configured from settings")
         else:
-            print("⚠️ API Key NOT configured. Please check .env file.")
+            logger.warning("API Key NOT configured. Please check .env file.")
 
     @property
     def is_configured(self) -> bool:
@@ -77,7 +80,7 @@ class GeminiClient:
 
         except Exception as e:
             error_msg = str(e)
-            print(f"❌ Gemini API Error: {error_msg}")
+            logger.error(f"Gemini API Error: {error_msg}")
             return {
                 "success": False,
                 "result": "",
@@ -108,14 +111,21 @@ class GeminiClient:
             yield f"Error: {str(e)}"
 
 
-# --- Backward Compatibility ---
-_default_client = GeminiClient()
+# --- Backward Compatibility (M-05: Lazy Initialization) ---
+_default_client = None
+
+def _get_client():
+    global _default_client
+    if _default_client is None:
+        _default_client = GeminiClient()
+    return _default_client
 
 def is_api_configured() -> bool:
-    return _default_client.is_configured
+    return _get_client().is_configured
 
 async def execute_gemini(text: str, config: dict, model: str = None) -> dict:
-    return await _default_client.generate_content(text, config, model)
+    return await _get_client().generate_content(text, config, model)
 
 def execute_gemini_stream(text: str, config: dict):
-    return _default_client.generate_content_stream(text, config)
+    return _get_client().generate_content_stream(text, config)
+
