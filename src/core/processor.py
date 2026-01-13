@@ -1,5 +1,5 @@
 """
-Logic Module - Core processing logic (Refactored for v4.0)
+Logic Module - Core processing logic (Refactored for v5.0 Phase 1)
 
 責務:
 - ビジネスロジックの統合 (CoreProcessor)
@@ -8,7 +8,6 @@ Logic Module - Core processing logic (Refactored for v4.0)
 - ログのサニタイズ
 """
 from .config import settings
-import hashlib
 import uuid
 from sqlalchemy.orm import Session
 from .models import TextRequest, PrefetchCache, SyncJob
@@ -22,12 +21,9 @@ LONG_TEXT_THRESHOLD = 1000  # Characters threshold for model selection
 
 # --- Dependencies ---
 from .types import ProcessingResult, DiffLine, ScanResult, ProcessingSuccess, ProcessingError
-from .privacy import PrivacyScanner, mask_pii, unmask_pii
-from .gemini import (
-    is_api_configured,
-    execute_gemini,
-    execute_gemini_stream,
-)
+from .privacy import PrivacyHandler
+from .gemini import GeminiClient, execute_gemini, execute_gemini_stream
+from .audit_logger import AuditLogger
 
 # ロガー設定
 logger = logging.getLogger("core_logic")
@@ -38,18 +34,11 @@ logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
 from .seasoning import SeasoningManager
+from .cache import CacheManager
 
 # --- Utilities ---
-def get_text_hash(text: str) -> str:
-    return hashlib.sha256(text.encode()).hexdigest()[:32]
+# get_text_hash, sanitize_log are delegated to CacheManager
 
-def sanitize_log(text: str) -> str:
-    """ログ用にテキストをサニタイズ（PII除去）"""
-    if not text:
-        return "[empty]"
-    # ハッシュ化して識別可能だが復元不可能にする
-    text_hash = get_text_hash(text)[:8]
-    return f"[text:{text_hash}...len={len(text)}]"
 
 def generate_diff(original: str, result: str) -> List[DiffLine]:
     """元テキストと変換後テキストの差分を生成"""
@@ -79,7 +68,7 @@ def generate_diff(original: str, result: str) -> List[DiffLine]:
                 diff_result.append({"type": "added", "content": line.rstrip("\n"), "line": line_num})
     return diff_result
 
-# --- Core Processor (New v4.0) ---
+# --- Core Processor (New v5.0) ---
 class CoreProcessor:
     """
     AI-Clipboard-Proの中枢ロジック
@@ -90,7 +79,10 @@ class CoreProcessor:
     - Offline Cache Fallback
     """
     def __init__(self):
-        pass # No more StyleManager
+        self.cache_manager = CacheManager()
+        self.privacy_handler = PrivacyHandler()
+        self.gemini_client = GeminiClient()
+        self.audit_logger = AuditLogger()
 
     def _select_model(self, text: str, seasoning: int) -> str:
         """CostRouter: Speed is priority. Use Flash by default."""
@@ -99,7 +91,7 @@ class CoreProcessor:
             return settings.MODEL_SMART
             
         # Pro model for high seasoning + long text
-        if len(text) > LONG_TEXT_THRESHOLD and seasoning >= UMAMI_THRESHOLD:
+        if len(text) > LONG_TEXT_THRESHOLD:
             return settings.MODEL_SMART
         return settings.MODEL_FAST
 
@@ -164,32 +156,15 @@ class CoreProcessor:
             "system": system_prompt,
             "params": {"temperature": 0.3}
         }
-        text_hash = get_text_hash(req.text)
-
-        logger.info(f"📩 Processing: {sanitize_log(req.text)} seasoning={req.seasoning}")
+        logger.info(f"📩 Processing: {CacheManager.sanitize_log(req.text)} seasoning={req.seasoning}")
 
         # --- Sub-function: Cache Fallback ---
-        def try_cache_fallback() -> Optional[ProcessingSuccess]:
-            if db is None:
-                return None
-            cache = db.query(PrefetchCache).filter(PrefetchCache.hash_id == text_hash).first()
-            cache_key = f"seasoning_{req.seasoning}"
-            if cache and cache.results and cache_key in cache.results:
-                cached_result = cache.results[cache_key]
-                if not cached_result.startswith("Error:"):
-                    logger.info(f"📦 Cache Hit: {sanitize_log(cached_result)}")
-                    return {
-                        "result": cached_result, 
-                        "seasoning": req.seasoning, 
-                        "from_cache": True,
-                        "model_used": None
-                    }
-            return None
+        try_cache_fallback = lambda: self.cache_manager.check_cache(db, req.text, req.seasoning)
 
         try:
             # 1. PII Masking (PRIVACY_MODE=False時はスキップ → 速度向上)
             if settings.PRIVACY_MODE:
-                masked_text, pii_mapping = mask_pii(req.text)
+                masked_text, pii_mapping = self.privacy_handler.mask(req.text)
             else:
                 masked_text = req.text  # そのまま送信（速度最優先）
                 pii_mapping = {}
@@ -200,33 +175,25 @@ class CoreProcessor:
             model_name = self._select_model(masked_text, req.seasoning)
             
             # 3. API Execution
-            result = await execute_gemini(masked_text, config, model=model_name)
+            result = await self.gemini_client.generate_content(masked_text, config, model=model_name)
 
             if result["success"]:
                 # 4. PII Unmasking (PRIVACY_MODE=True時のみ)
                 final_result = result["result"]
                 if settings.PRIVACY_MODE and pii_mapping:
-                    final_result = unmask_pii(final_result, pii_mapping)
+                    final_result = self.privacy_handler.unmask(final_result, pii_mapping)
                 
                 # --- TEALS Audit Logging ---
-                try:
-                    from src.infra.audit import get_audit_manager
-                    audit = get_audit_manager()
-                    # Calculate simplified processing time (can be improved)
-                    # C-3: user_id is missing in Core layer request, use default for now. 
-                    # Improvement: Pass user_id in TextRequest or method arg.
-                    audit.log_processing(
-                        user_id="anonymous", # Placeholder until C-3 fix in API layer propagation
-                        input_text=masked_text, # Log masked text for strict privacy
-                        output_text=final_result,
-                        seasoning=req.seasoning,
-                        ai_model=model_name
-                    )
-                except Exception as e:
-                    logger.warning(f"⚠️ Audit logging failed: {e}")
+                self.audit_logger.log_processing(
+                    user_id="anonymous",
+                    input_text=masked_text,
+                    output_text=final_result,
+                    seasoning=req.seasoning,
+                    ai_model=model_name
+                )
                 # ---------------------------
 
-                logger.info(f"✅ Success: {sanitize_log(final_result)}")
+                logger.info(f"✅ Success: {CacheManager.sanitize_log(final_result)}")
                 return {
                     "result": final_result, 
                     "seasoning": req.seasoning, 

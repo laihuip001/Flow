@@ -72,57 +72,66 @@ class PrivacyScanner:
         return False, None
 
 
+class PrivacyHandler:
+    """
+    Privacy handling logic encapsulated (v5.0 Phase 1)
+    """
+    def __init__(self):
+        self.scanner = PrivacyScanner()
+
+    def mask(self, text: str, use_custom_vocab: bool = True) -> tuple[str, dict]:
+        """
+        PIIをプレースホルダに置換してAPIに送信可能にする。
+        Returns: (masked_text, mapping)
+        """
+        findings = self.scanner.scan(text)
+
+        masked_text = text
+        mapping = {}
+        counter = 0
+
+        # 1. Regexベースのマスク
+        if findings["has_risks"]:
+            for pii_type, values in findings["risks"].items():
+                for val in values:
+                    if val in masked_text:  # まだ置換されていない場合のみ
+                        placeholder = f"[PII_{counter}]"
+                        masked_text = masked_text.replace(val, placeholder)
+                        mapping[placeholder] = val
+                        counter += 1
+
+        # 2. カスタム語彙ベースのマスク（オプション）
+        if use_custom_vocab:
+            try:
+                from .vocab_store import get_vocab_store
+                store = get_vocab_store()
+                custom_terms = store.find_in_text(masked_text)
+                for term in custom_terms:
+                    if term in masked_text:
+                        placeholder = f"[VOCAB_{counter}]"
+                        masked_text = masked_text.replace(term, placeholder)
+                        mapping[placeholder] = term
+                        counter += 1
+            except Exception:
+                pass  # vocab_storeが利用不可でもフォールバック
+
+        return masked_text, mapping
+
+    def unmask(self, text: str, mapping: dict) -> str:
+        """
+        プレースホルダをオリジナルのPIIに復元する。
+        """
+        result = text
+        for placeholder, original in mapping.items():
+            result = result.replace(placeholder, original)
+        return result
+
+
+# --- Backward Compatibility Functions ---
+_handler = PrivacyHandler()
+
 def mask_pii(text: str, use_custom_vocab: bool = True) -> tuple[str, dict]:
-    """
-    PIIをプレースホルダに置換してAPIに送信可能にする。
-
-    Args:
-        text: 入力テキスト
-        use_custom_vocab: カスタム語彙も検出するか（デフォルトTrue）
-
-    Returns:
-        tuple: (masked_text, mapping) - マスク済テキストと復元用マッピング
-    """
-    scanner = PrivacyScanner()
-    findings = scanner.scan(text)
-
-    masked_text = text
-    mapping = {}
-    counter = 0
-
-    # 1. Regexベースのマスク
-    if findings["has_risks"]:
-        for pii_type, values in findings["risks"].items():
-            for val in values:
-                if val in masked_text:  # まだ置換されていない場合のみ
-                    placeholder = f"[PII_{counter}]"
-                    masked_text = masked_text.replace(val, placeholder)
-                    mapping[placeholder] = val
-                    counter += 1
-
-    # 2. カスタム語彙ベースのマスク（オプション）
-    if use_custom_vocab:
-        try:
-            from .vocab_store import get_vocab_store
-            store = get_vocab_store()
-            custom_terms = store.find_in_text(masked_text)
-            for term in custom_terms:
-                if term in masked_text:
-                    placeholder = f"[VOCAB_{counter}]"
-                    masked_text = masked_text.replace(term, placeholder)
-                    mapping[placeholder] = term
-                    counter += 1
-        except Exception:
-            pass  # vocab_storeが利用不可でもフォールバック
-
-    return masked_text, mapping
-
+    return _handler.mask(text, use_custom_vocab)
 
 def unmask_pii(text: str, mapping: dict) -> str:
-    """
-    プレースホルダをオリジナルのPIIに復元する。
-    """
-    result = text
-    for placeholder, original in mapping.items():
-        result = result.replace(placeholder, original)
-    return result
+    return _handler.unmask(text, mapping)
