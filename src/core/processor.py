@@ -16,7 +16,7 @@ import logging
 from typing import List, Optional
 
 # --- Constants (C-4-5 Refactored) ---
-UMAMI_THRESHOLD = 90  # Seasoning > 90 uses Smart Model
+UMAMI_THRESHOLD = 100  # Seasoning == 100 uses Smart Model (Rich only)
 LONG_TEXT_THRESHOLD = 1000  # Characters threshold for model selection
 
 # --- Dependencies ---
@@ -147,6 +147,9 @@ class CoreProcessor:
         5. API Call
         6. Unmask PII (PRIVACY_MODE=True時のみ)
         """
+        # Resolve Seasoning Level (v4.2 3-Stage)
+        req.seasoning = SeasoningManager.resolve_level(req.seasoning)
+
         # ユーザーカスタムプロンプトを統合
         system_prompt = SeasoningManager.get_system_prompt(
             req.seasoning, 

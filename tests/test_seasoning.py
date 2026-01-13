@@ -52,6 +52,28 @@ class TestSeasoningManager(unittest.TestCase):
         self.assertIn("プロンプトとして整形", prompt)
         self.assertIn("構造を整理", prompt)
 
+    def test_get_system_prompt_structure(self):
+        """プロンプト生成の基本構造チェック"""
+        prompt = SeasoningManager.get_system_prompt(30)
+        self.assertIsInstance(prompt, str)
+        self.assertTrue(len(prompt) > 10)
+
+    def test_resolve_level_boundary(self):
+        """v4.2 3段階化の境界値テスト (Light/Medium/Rich)"""
+        # Light (<= 45) -> 30
+        self.assertEqual(SeasoningManager.resolve_level(0), 30)
+        self.assertEqual(SeasoningManager.resolve_level(45), 30)
+        
+        # Medium (46 - 75) -> 60
+        self.assertEqual(SeasoningManager.resolve_level(46), 60)
+        self.assertEqual(SeasoningManager.resolve_level(60), 60)
+        self.assertEqual(SeasoningManager.resolve_level(75), 60)
+        
+        # Rich (>= 76) -> 100
+        self.assertEqual(SeasoningManager.resolve_level(76), 100)
+        self.assertEqual(SeasoningManager.resolve_level(90), 100)
+        self.assertEqual(SeasoningManager.resolve_level(100), 100)
+
     def test_get_system_prompt_rich(self):
         """Rich レベルのプロンプト生成"""
         prompt = SeasoningManager.get_system_prompt(80)
