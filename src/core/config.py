@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     
     # 🔒 並列処理制限 (SQLite lock回避)
     MAX_PREFETCH_WORKERS: int = 1  # プリフェッチジョブの最大並列数
+
+    # 🧹 キャッシュライフサイクル管理 (v5.0 Phase 3.5)
+    CACHE_TTL_HOURS: int = 168  # 7日 (賞味期限)
+    CACHE_MAX_ENTRIES: int = 1000  # 最大保存件数 (容量制限)
     
     class Config:
         env_file = ".env"

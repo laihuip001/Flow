@@ -86,3 +86,9 @@ src/
 
 - Full standards: [CONSTITUTION.md](file:///CONSTITUTION.md)
 - System context: [.ai/SYSTEM_CONTEXT.md](file:///.ai/SYSTEM_CONTEXT.md)
+
+### External (dev-rules)
+
+- 共通開発規範: [dev-rules/GEMINI.md](file:///c:/Users/makaron8426/dev/dev-rules/GEMINI.md)
+- プロンプトライブラリ: [dev-rules/prompts/](file:///c:/Users/makaron8426/dev/dev-rules/prompts/)
+- `/load` ワークフロー: Gレイヤー・Cモジュール等をロード

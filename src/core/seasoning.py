@@ -12,6 +12,11 @@ LIGHT_MAX = 40
 MEDIUM_MAX = 70
 RICH_MAX = 90  # 91-100 is Deep
 
+# 3-Stage Seasoning (v4.2)
+RESOLVED_LIGHT = 30
+RESOLVED_MEDIUM = 60
+RESOLVED_RICH = 100
+
 
 class SeasoningManager:
     """
@@ -83,3 +88,21 @@ class SeasoningManager:
             return "Rich（濃いめ）"
         return "Deep（深い）"
 
+
+    @staticmethod
+    def resolve_level(level: int) -> int:
+        """
+        Seasoning値を3段階（Light/Medium/Rich）に正規化する。
+        (v4.2 Opt-in: UIはv4.3で更新)
+        
+        Args:
+            level: 0-100の入力
+        
+        Returns:
+            30 (Light), 60 (Medium), or 100 (Rich)
+        """
+        if level <= 45:
+            return RESOLVED_LIGHT
+        if level <= 75:
+            return RESOLVED_MEDIUM
+        return RESOLVED_RICH

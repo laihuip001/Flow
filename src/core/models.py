@@ -12,7 +12,10 @@ class PrefetchCache(Base):
     hash_id = Column(String, primary_key=True, index=True)
     original_text = Column(Text)
     results = Column(JSON, default={})
+    # v5.0 Phase 3.5: Lifecycle Management
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_accessed_at = Column(DateTime, default=datetime.utcnow)
 
 class Preset(Base):
     __tablename__ = "presets"
@@ -22,15 +25,18 @@ class Preset(Base):
 
 class SyncJob(Base):
     """
-    オフライン時のリクエストを保持するキュー (v4.0 Phase 3準備)
+    遅延同期ジョブ (v5.0 Phase 4: Delayed Sync)
+    オフライン時のリクエストを保持し、後で処理するキュー
     """
     __tablename__ = "sync_jobs"
     id = Column(String, primary_key=True, index=True)
-    text = Column(Text) 
+    text = Column(Text)
     seasoning = Column(Integer, default=30)
-    result = Column(Text, nullable=True) # Output result
-    status = Column(String, default="pending") # pending, processing, completed, failed
+    result = Column(Text, nullable=True)
+    status = Column(String, default="pending")  # pending, processing, completed, failed
+    error_message = Column(Text, nullable=True)  # エラー詳細
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     retry_count = Column(Integer, default=0)
     is_favorite = Column(Boolean, default=False) # v4.1 Favorite Persistence
 
