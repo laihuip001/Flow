@@ -63,28 +63,9 @@ Boundaries:
   - ピボット判断 → CEOへ上申
 ```
 
-## 3原則 (Immutable)
+## 共通ルール参照
 
-| # | 原則 | 意味 |
-|---|------|------|
-| 1 | **Guard** | 大事なものには触らせない |
-| 2 | **Prove** | 動くと言う前にテストで示せ |
-| 3 | **Undo** | 何をしても元に戻せる状態を保て |
-
-## Termux制約 (CRITICAL)
-
-```yaml
-Forbidden:
-  - pandas, numpy, scipy, lxml (ビルド困難)
-  - config.json の上書き
-  - API Key のログ出力
-  - rm -rf without confirmation
-
-Required:
-  - Pure Python優先
-  - メモリ・バッテリー効率重視
-  - WALモード (SQLite)
-```
+> 3原則、Termux制約、Protocol G/Dは `dev\.agent\workflows\global-rules.md` を参照
 
 ## 同期基盤
 
