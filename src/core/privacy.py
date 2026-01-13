@@ -20,12 +20,12 @@ class PrivacyScanner:
             "IP_ADDRESS": r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}",
             "CREDIT_CARD": r"\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}",
             # API Keys (拡張: v4.1)
-            "API_KEY": r"(sk-|pk_|AIza|ghp_|gsk_|glpat-|xox[baprs]-|Bearer\s+)[a-zA-Z0-9_-]{20,}",
+            "API_KEY": r"(?:sk-|pk_|AIza|ghp_|gsk_|glpat-|xox[baprs]-|Bearer\s+)[a-zA-Z0-9_-]{20,}",
             "AWS_KEY": r"AKIA[0-9A-Z]{16}",
             # パスワード系 (v4.1)
-            "PASSWORD": r"(?i)(password|passwd|pwd|secret|token)\s*[=:]\s*['\"]?[^\s'\"]{8,}",
+            "PASSWORD": r"(?i)(?:password|passwd|pwd|secret|token)\s*[=:]\s*['\"]?[^\s'\"]{8,}",
             # 日本住所 (v4.1)
-            "JP_ADDRESS": r"(東京都|北海道|(?:京都|大阪)府|[^\s]{2,3}県)[^\s]{2,}[市区町村]",
+            "JP_ADDRESS": r"(?:東京都|北海道|(?:京都|大阪)府|[^\s]{2,3}県)[^\s]{2,}[市区町村]",
         }
         # 機密キーワード (大文字小文字無視)
         self.sensitive_keywords = [
