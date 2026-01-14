@@ -13,7 +13,6 @@ from typing import Optional, Dict, Any, List
 from sqlalchemy.orm import Session
 
 from .models import SyncJob
-from .config import settings
 
 logger = logging.getLogger("core_sync")
 

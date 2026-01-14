@@ -127,20 +127,42 @@ final = unmask_pii(result, mapping)
 - [ARCHITECTURE.md](ARCHITECTURE.md) - システム設計
 - [CONSTITUTION.md](CONSTITUTION.md) - 開発規約
 - [USAGE_GUIDE.md](USAGE_GUIDE.md) - 使い方ガイド
+- [HTTP Shortcuts 設定ガイド](docs/http_shortcuts_setup.md) - Android連携 (v5.0)
+
+---
+
+## 🆕 v5.0 新機能
+
+### Delayed Sync (遅延同期)
+
+オフライン時にリクエストをキューに保存し、接続復帰後に処理します。
+
+```
+POST /sync/enqueue   # ジョブ登録
+POST /sync/process   # 処理実行
+GET  /sync/status/{id}  # 結果確認
+```
+
+### Cache Lifecycle
+
+- **TTL**: 7日経過したキャッシュは自動期限切れ
+- **LRU**: 1000件を超えると古い順に削除
 
 ---
 
 ## 🧪 Testing
 
 ```bash
-pytest tests/test_logic.py tests/test_privacy.py -v
+pytest tests/ -v
 ```
 
-**テスト対象:**
+**テストカバレッジ:**
 
-- `SeasoningManager` - プロンプト生成
-- `PrivacyScanner` - PII 検出
-- `mask_pii / unmask_pii` - マスク往復
+| Module | Tests |
+|--------|-------|
+| Cache Lifecycle | 2 |
+| Sync | 7 |
+| Privacy | (既存) |
 
 ---
 
@@ -152,7 +174,8 @@ pytest tests/test_logic.py tests/test_privacy.py -v
 2. **セキュリティ設計** - PII マスキング、トークン認証
 3. **リファクタリング** - 大規模なスタイル → Seasoning 移行
 4. **テスト駆動** - 変更前にテストを書く習慣
+5. **オフライン対応** - Delayed Sync パターン (v5.0)
 
 ---
 
-*Flow AI v4.0 - Built with Gemini AI*
+*Flow AI v5.0 - Built with Gemini AI*

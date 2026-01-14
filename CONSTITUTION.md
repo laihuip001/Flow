@@ -259,4 +259,30 @@ if level <= 30:
 | `.editorconfig` | エディタ共通設定 |
 
 ---
-*Last Updated: 2026-01-10*
+
+## 🆕 8. v5.0 New Features (2026-01-13)
+
+### 8.1. Delayed Sync (遅延同期)
+
+オフライン時にリクエストをキューに登録し、後で処理する機能。
+
+| API | Method | Description |
+|-----|--------|-------------|
+| `/sync/enqueue` | POST | ジョブ登録 |
+| `/sync/process` | POST | 処理実行 |
+| `/sync/status/{id}` | GET | 結果確認 |
+
+### 8.2. Cache Lifecycle Management
+
+- **TTL (Time To Live)**: 7日で自動期限切れ
+- **LRU (Least Recently Used)**: 1000件を超えると古い順に削除
+
+### 8.3. Test Coverage
+
+- Sync: 7 tests
+- Cache Lifecycle: 2 tests
+- Seasoning: 10 tests
+- API Endpoints: 6 tests
+
+---
+*Last Updated: 2026-01-13 (v5.0.0)*
