@@ -40,17 +40,80 @@ class PrivacyScanner:
             "取扱注意",
         ]
 
+        # --- Optimization: Pre-compile patterns and keywords ---
+        self._compiled_patterns = []
+        self._compile_patterns()
+
+        # Map upper case keyword to original keyword for fast lookup
+        self._sensitive_keywords_map = {kw.upper(): kw for kw in self.sensitive_keywords}
+
+    def _compile_patterns(self):
+        """Compile regex patterns and attach pre-check functions."""
+
+        def check_always(text, text_upper): return True
+        def check_digits(text, text_upper): return bool(re.search(r'\d', text))
+        def check_at(text, text_upper): return '@' in text
+        def check_hyphen(text, text_upper): return '-' in text
+
+        # PASSWORD: checks for keywords
+        password_triggers = ["PASSWORD", "PASSWD", "PWD", "SECRET", "TOKEN"]
+        def check_password(text, text_upper):
+            return any(k in text_upper for k in password_triggers)
+
+        # API_KEY triggers
+        api_triggers = ["sk-", "pk_", "AIza", "ghp_", "gsk_", "glpat-", "xox", "Bearer"]
+        def check_api_key(text, text_upper):
+            return any(k in text for k in api_triggers)
+
+        # AWS_KEY
+        def check_aws_key(text, text_upper): return "AKIA" in text
+
+        # JP_ADDRESS
+        jp_triggers = ["都", "道", "府", "県"]
+        def check_jp_address(text, text_upper):
+            return any(k in text for k in jp_triggers)
+
+        for key, pattern in self.patterns.items():
+            regex = re.compile(pattern)
+            pre_check = check_always
+
+            if key == "EMAIL":
+                pre_check = check_at
+            elif key in ["PHONE", "ZIP"]:
+                pre_check = check_hyphen
+            elif key in ["MY_NUMBER", "IP_ADDRESS", "CREDIT_CARD"]:
+                 pre_check = check_digits
+            elif key == "API_KEY":
+                pre_check = check_api_key
+            elif key == "AWS_KEY":
+                pre_check = check_aws_key
+            elif key == "PASSWORD":
+                pre_check = check_password
+            elif key == "JP_ADDRESS":
+                pre_check = check_jp_address
+
+            self._compiled_patterns.append((key, regex, pre_check))
+
     def scan(self, text: str) -> dict:
         findings = {}
+        # Pre-compute upper case for optimization
+        text_upper = text.upper()
+
         # Regex パターンマッチ
-        for p_type, pattern in self.patterns.items():
-            matches = re.findall(pattern, text)
+        for p_type, regex, pre_check in self._compiled_patterns:
+            if not pre_check(text, text_upper):
+                continue
+
+            matches = regex.findall(text)
             if matches:
                 findings[p_type] = list(set(matches))
 
         # キーワードマッチ
-        text_upper = text.upper()
-        keyword_hits = [kw for kw in self.sensitive_keywords if kw.upper() in text_upper]
+        keyword_hits = []
+        for kw_upper, kw_orig in self._sensitive_keywords_map.items():
+             if kw_upper in text_upper:
+                 keyword_hits.append(kw_orig)
+
         if keyword_hits:
             findings["SENSITIVE_KEYWORD"] = keyword_hits
 
@@ -66,9 +129,9 @@ class PrivacyScanner:
             tuple: (is_blocked: bool, matched_keyword: str | None)
         """
         text_upper = text.upper()
-        for kw in self.sensitive_keywords:
-            if kw.upper() in text_upper:
-                return True, kw
+        for kw_upper, kw_orig in self._sensitive_keywords_map.items():
+            if kw_upper in text_upper:
+                return True, kw_orig
         return False, None
 
 

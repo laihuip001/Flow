@@ -125,3 +125,9 @@ class TestPrivacyScanner:
             masked, _ = mask_pii(f"住所: {addr}")
             assert addr not in masked, f"Failed to mask: {addr}"
 
+    def test_aws_key(self):
+        """AWS Key detection"""
+        key = "AKIA1234567890ABCDEF"
+        masked, _ = mask_pii(f"AWS Key: {key}")
+        assert key not in masked
+        assert "[PII_" in masked
