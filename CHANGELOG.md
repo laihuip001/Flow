@@ -17,11 +17,36 @@ AI Clipboard Pro の進化の経緯
 
 ## 📅 バージョン履歴
 
+### v4.1.0 - Security Hardening 🛡️
+
+**「見逃さない盾：PII検知パターンの大幅拡張」**
+
+#### 🔒 Security Enhancements
+
+- **API Key検知**: `sk-`, `AIza`, `ghp_`, `Bearer`等の主要APIキー形式を自動検出
+- **AWS Key検知**: `AKIA`プレフィックスのIAMアクセスキーを検出
+- **パスワードパターン**: `password=`, `secret:`等の平文クレデンシャル記載を検出
+- **日本語住所検知**: 都道府県＋市区町村パターンで住所をマスク対象に追加
+
+#### 📚 Documentation & Architecture
+
+- **IDE同期アーキテクチャ**: Architect/Constructor間の設定をGitHub経由で一元管理
+- **HANDOFF_CONSTRUCTOR.md**: 実装担当への引き継ぎ指示書を追加
+- **Protocol D-Extended**: 外部サービス存続確認プロトコルを適用
+
+#### 🔧 Technical
+
+- **`DESIGN_SEMANTIC_PRIVACY.md`**: Gemini Nano統合の調査結果を文書化（Termux非互換のため見送り）
+- **`DESIGN_RAG_VOCABULARY.md`**: カスタム語彙学習の設計書を追加
+
+---
+
 ### v4.0.0 - Seasoning Update 🆕
 
 **「味付けの自由度：0-100の連続スペクトラムへ」**
 
 #### ✨ Core Changes
+
 - **Seasoning Spectrum:** 離散スタイル（business/casual等）を廃止し、0-100連続値に移行
   - Light (0-40): 誤字修正のみ、素材を最大限活かす
   - Medium (41-70): 標準的な構造整理
@@ -33,12 +58,14 @@ AI Clipboard Pro の進化の経緯
 - **Hash Integrity:** クリップボード内容のハッシュ整合性チェック
 
 #### 🔧 Architecture
+
 - `seasoning.py` - 味付けロジックの分離
 - `infra/teals/` - 検証モジュール群 (`tests/test_teals.py` 追加)
 - **CoreProcessor:** 統合処理クラス（Gemini API呼び出し + マスク処理）
 - **日本語プロンプト最適化:** 日本語入力には日本語指示で精度向上
 
 #### 📚 Documentation
+
 - `.gemini/rules.md` - dev-rules参照追加
 - `CHANGELOG.md` - v4.0.0 エントリ詳細化
 

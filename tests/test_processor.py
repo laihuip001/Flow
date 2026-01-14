@@ -96,16 +96,21 @@ class TestCoreProcessorProcess:
         """正常処理フロー"""
         req = TextRequest(text="テスト入力", seasoning=50)
         
-        # Gemini APIをモック
+        # Gemini APIをモック (CoreProcessor.gemini_client.generate_content)
         mock_result = {"success": True, "result": "整形されたテキスト"}
-        with patch("src.core.processor.execute_gemini", new_callable=AsyncMock) as mock_api:
-            mock_api.return_value = mock_result
-            
-            result = await processor.process(req)
-            
-            assert "result" in result
-            assert result["result"] == "整形されたテキスト"
-            assert result["from_cache"] == False
+        
+        # processor.gemini_client は __init__ で生成されているので、それをモックと差し替える
+        processor.gemini_client = MagicMock()
+        processor.gemini_client.generate_content = AsyncMock(return_value=mock_result)
+        
+        # 実行 (CacheManagerのモックが必要かもだが、DB=Noneならキャッシュチェックはスキップorエラーキャッチで無視されるはず)
+        # しかし実装では check_cache が例外キャッチして None を返すので大丈夫そう
+        
+        result = await processor.process(req, db=None)
+        
+        assert "result" in result
+        assert result["result"] == "整形されたテキスト"
+        assert result["from_cache"] == False
     
     @pytest.mark.asyncio
     async def test_process_api_error(self, processor):
@@ -117,14 +122,16 @@ class TestCoreProcessorProcess:
             "error": "api_error",
             "blocked_reason": "APIエラー"
         }
-        with patch("src.core.processor.execute_gemini", new_callable=AsyncMock) as mock_api:
-            mock_api.return_value = mock_result
-            
-            result = await processor.process(req)
-            
-            assert "error" in result
-            assert result["error"] == "api_error"
+        
+        processor.gemini_client = MagicMock()
+        processor.gemini_client.generate_content = AsyncMock(return_value=mock_result)
+        
+        result = await processor.process(req, db=None)
+        
+        assert "error" in result
+        assert result["error"] == "api_error"
     
+
     @pytest.mark.asyncio
     async def test_process_privacy_masking(self, processor):
         """PIIマスキングが適用されることを確認"""
@@ -132,16 +139,19 @@ class TestCoreProcessorProcess:
         req = TextRequest(text="連絡先: test@example.com", seasoning=50)
         
         mock_result = {"success": True, "result": "連絡先: [PII_0]"}
-        with patch("src.core.processor.execute_gemini", new_callable=AsyncMock) as mock_api:
-            with patch("src.core.processor.settings") as mock_settings:
-                mock_settings.PRIVACY_MODE = True
-                mock_settings.MODEL_FAST = "gemini-flash"
-                mock_settings.MODEL_SMART = "gemini-pro"
-                mock_settings.USER_SYSTEM_PROMPT = ""
-                mock_api.return_value = mock_result
-                
-                # プロセス実行（実際のマスクはmask_piiで行われる）
-                result = await processor.process(req)
-                
-                # APIが呼ばれたことを確認
-                mock_api.assert_called_once()
+        
+        processor.gemini_client = MagicMock()
+        processor.gemini_client.generate_content = AsyncMock(return_value=mock_result)
+
+        with patch("src.core.processor.settings") as mock_settings:
+            mock_settings.PRIVACY_MODE = True
+            mock_settings.MODEL_FAST = "gemini-flash"
+            mock_settings.MODEL_SMART = "gemini-pro"
+            mock_settings.USER_SYSTEM_PROMPT = ""
+            
+            # プロセス実行
+            result = await processor.process(req, db=None)
+            
+            # APIが呼ばれたことを確認 (モックを通して確認)
+            processor.gemini_client.generate_content.assert_called_once()
+

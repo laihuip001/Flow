@@ -38,6 +38,13 @@ from .cache import CacheManager
 
 # --- Utilities ---
 # get_text_hash, sanitize_log are delegated to CacheManager
+def get_text_hash(text: str) -> str:
+    """テキストのハッシュを生成 (CacheManager委譲)"""
+    return CacheManager.get_text_hash(text)
+
+def sanitize_log(text: str) -> str:
+    """ログ用にテキストをサニタイズ (CacheManager委譲)"""
+    return CacheManager.sanitize_log(text)
 
 
 def generate_diff(original: str, result: str) -> List[DiffLine]:

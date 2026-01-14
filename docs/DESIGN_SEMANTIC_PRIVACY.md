@@ -2,7 +2,7 @@
 
 ## 概要
 
-Regexでは捉えられない**文脈的PII**（プロジェクト名、社内用語等）を、ローカルLLM（Gemini Nano）で検出する設計。
+Regexでは捉えられない**文脈的PII**（プロジェクト名、社内用語等）を、ローカルLLM（Gemini Nano）で検出する設計検討。**※Termux非互換のため見送り**
 
 ---
 
@@ -80,12 +80,38 @@ async def enhanced_mask_pii(text: str) -> tuple[str, dict]:
 | SDK | `google-ai-edge` または同等 |
 | モデルサイズ | ~200MB (量子化済み) |
 | 推論時間 | <100ms/リクエスト |
-| プラットフォーム | Android (Termux), Windows |
+| プラットフォーム | ~~Android (Termux)~~, Windows ※Termux非互換 |
 
 ---
 
-## 移行パス
+## ~~移行パス~~ （廃止: Termux非互換のため）
 
-1. **検証フェーズ**: Google AI Edge SDK の Termux 互換性確認
-2. **プロトタイプ**: 単独スクリプトで精度検証
-3. **統合**: `privacy.py` にオプショナル統合
+1. ~~**検証フェーズ**: Google AI Edge SDK の Termux 互換性確認~~
+2. ~~**プロトタイプ**: 単独スクリプトで精度検証~~
+3. ~~**統合**: `privacy.py` にオプショナル統合~~
+
+---
+
+## ⚠️ Termux互換性調査結果 (2026-01-12)
+
+> **Protocol D-Extended 適用による調査結果**
+
+### 結論: **Termux非互換**
+
+| 項目 | 状態 |
+|------|------|
+| Google AI Edge SDK | ❌ 非推奨（deprecated） |
+| ML Kit Prompt API | ❌ ネイティブAndroid専用 |
+| AICore | ❌ システムサービス、Termuxからアクセス不可 |
+| 対応デバイス | Pixel 9シリーズのみ |
+
+### 代替案
+
+| 方式 | 説明 | 推奨 |
+|------|------|------|
+| **クラウドAPI** | `google-generative-ai` (Gemini 3 Flash) | ✅ 現行方式 |
+| **ローカルLLM** | llama.cpp / Ollama on Termux | △ 要検証 |
+
+### 推奨方針
+
+Gemini Nano統合は**見送り**。現行のクラウドAPI方式を継続し、将来的にOllamaの Termux互換性を検証する。

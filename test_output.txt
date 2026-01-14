@@ -1,0 +1,49 @@
+============================= test session starts =============================
+platform win32 -- Python 3.14.2, pytest-9.0.2, pluggy-1.6.0 -- C:\Users\laihuip001\AppData\Local\Programs\Python\Python314\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\laihuip001\dev\Flow
+plugins: anyio-4.12.0, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 102 items / 1 error
+
+=================================== ERRORS ====================================
+__________________ ERROR collecting tests/test_user_text.py ___________________
+tests\test_user_text.py:41: in <module>
+    input("\nPress Enter...")
+..\..\AppData\Local\Programs\Python\Python314\Lib\site-packages\_pytest\capture.py:229: in read
+    raise OSError(
+E   OSError: pytest: reading from stdin while output is captured!  Consider using `-s`.
+------------------------------- Captured stdout -------------------------------
+≡ƒöæ API Key: AIzaSyCX...
+
+≡ƒô¥ Input length: 153 chars
+==================================================
+Γ£à Response in 10.21s:
+πüöµÅÉτñ║πüäπüƒπüáπüäπüƒσåàσ«╣πü½σƒ║πüÑπüìπÇüPrivacyScannerπü«Φ¬▓Θíîπü¿Σ╗èσ╛îπü«σ▒òµ£¢πéÆΣ╗ÑΣ╕ïπü«πâ¥πéñπâ│πâêπüºΦªüτ┤äπüùπü╛πüÖπÇé
+
+### 1. τÅ╛τè╢πü«Φ¬▓Θíî∩╝Üµ¡úΦªÅΦí¿τÅ╛∩╝êRegex∩╝ëπü╕πü«Σ╛¥σ¡ÿ
+*   **µñ£τƒÑτ▓╛σ║ªπü«ΘÖÉτòî:** τÅ╛Φíîπü«πÇîµñ£τƒÑπâ╗Φ¡ªσæèπÇìµû╣σ╝Åπü»µ¡úΦªÅΦí¿τÅ╛πü½Σ╛¥σ¡ÿπüùπüªπüèπéèπÇüπé½πâ╝πâëτò¬σÅ╖πéäπâíπâ╝πâ½πéóπâëπâ¼πé╣πü¬πü⌐πü«πÇîσ«Üσ₧ïπâæπé┐πâ╝πâ│πÇìπüùπüïΦ¡ÿσêÑπüºπüìπü¬πüäπÇé
+*   **Σ╕ìσ«îσà¿πü¬Σ┐¥Φ¡╖:** πâæπé┐πâ╝πâ│σîûπüºπüìπü¬πüäµ⌐ƒσ»åµâàσá▒∩╝êµûçΦäêπü½Σ╛¥σ¡ÿπüÖπéïπééπü«∩╝ëπüîµñ£τƒÑπéÆπüÖπéèµè£πüæπéïµºïΘÇáτÜäπü¬µ¼áΘÖÑπüîπüéπéïπÇé
+
+### 2. µ╜£σ£¿τÜäπâ¬πé╣πé»∩╝ÜµûçΦäêτÜäπü¬µ⌐ƒσ»åµâàσá▒πü«µ╝Åµ┤⌐
+*   **Θ¥₧σ«Üσ₧ïµâàσá▒πü«ΦªïΦÉ╜πü¿πüù:** πâùπâ¡πé╕πéºπé»πâêσÉìπÇüτñ╛σåàσ¢║µ£ëπü«τö¿Φ¬₧πÇüτï¼Φç¬πü«πâ¡πé╕πââπé»πÇüΣ║║ΘûôΘûóΣ┐éπÇüπüéπéïπüäπü»
+
+Press Enter...
+============================== warnings summary ===============================
+src\core\models.py:7
+  C:\Users\laihuip001\dev\Flow\src\core\models.py:7: MovedIn20Warning: The ``declarative_base()`` function is now available as sqlalchemy.orm.declarative_base(). (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    Base = declarative_base()
+
+src\core\config.py:3
+  C:\Users\laihuip001\dev\Flow\src\core\config.py:3: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class Settings(BaseSettings):
+
+..\..\AppData\Local\Programs\Python\Python314\Lib\site-packages\google\genai\types.py:43
+  C:\Users\laihuip001\AppData\Local\Programs\Python\Python314\Lib\site-packages\google\genai\types.py:43: DeprecationWarning: '_UnionGenericAlias' is deprecated and slated for removal in Python 3.17
+    VersionedUnionType = Union[builtin_types.UnionType, _UnionGenericAlias]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+ERROR tests/test_user_text.py - OSError: pytest: reading from stdin while out...
+!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+======================== 3 warnings, 1 error in 12.92s ========================

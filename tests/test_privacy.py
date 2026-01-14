@@ -125,3 +125,29 @@ class TestPrivacyScanner:
             masked, _ = mask_pii(f"住所: {addr}")
             assert addr not in masked, f"Failed to mask: {addr}"
 
+    # check_deny_list テスト
+    def test_deny_list_blocks_confidential(self, scanner):
+        """機密キーワードでブロックされることを確認"""
+        is_blocked, keyword = scanner.check_deny_list("This is CONFIDENTIAL data")
+        assert is_blocked is True
+        assert keyword == "CONFIDENTIAL"
+
+    def test_deny_list_blocks_japanese(self, scanner):
+        """日本語機密キーワードでブロックされることを確認"""
+        is_blocked, keyword = scanner.check_deny_list("この文書は社外秘です")
+        assert is_blocked is True
+        assert keyword == "社外秘"
+
+    def test_deny_list_case_insensitive(self, scanner):
+        """大文字小文字を無視してブロックすることを確認"""
+        is_blocked, keyword = scanner.check_deny_list("this is secret info")
+        assert is_blocked is True
+        assert keyword == "SECRET"
+
+    def test_deny_list_allows_safe_text(self, scanner):
+        """安全なテキストはブロックされないことを確認"""
+        is_blocked, keyword = scanner.check_deny_list("Hello, this is a normal message.")
+        assert is_blocked is False
+        assert keyword is None
+
+
