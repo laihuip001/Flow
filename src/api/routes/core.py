@@ -26,14 +26,14 @@ def set_processor(processor: logic.CoreProcessor):
 @router.get("/seasoning")
 def list_seasoning_presets():
     """利用可能なSeasoningプリセット一覧"""
-    from src.core.seasoning import SALT_MAX, SAUCE_MAX
+    from src.core.seasoning import LIGHT_MAX, MEDIUM_MAX
     return {
         "presets": [
             {"id": "salt", "level": 10, "name": "Salt", "description": "最小限の修正（誤字脱字）"},
             {"id": "sauce", "level": 50, "name": "Sauce", "description": "標準的な整形"},
             {"id": "spice", "level": 90, "name": "Spice", "description": "積極的な補完・強化"}
         ],
-        "thresholds": {"salt_max": SALT_MAX, "sauce_max": SAUCE_MAX}
+        "thresholds": {"salt_max": LIGHT_MAX, "sauce_max": MEDIUM_MAX}
     }
 
 
