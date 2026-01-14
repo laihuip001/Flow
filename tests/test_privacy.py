@@ -101,6 +101,17 @@ class TestPrivacyScanner:
             masked, _ = mask_pii(f"Token: {k}")
             assert k not in masked, f"Failed to mask: {k}"
 
+    def test_aws_key_pattern(self):
+        """AWS Access Key ID の検出 (AKIA...)"""
+        keys = [
+            "AKIAIOSFODNN7EXAMPLE",
+            "AKIA0123456789ABCDEF",
+        ]
+        for k in keys:
+            masked, _ = mask_pii(f"AWS Key: {k}")
+            assert k not in masked, f"Failed to mask: {k}"
+            assert "[PII_" in masked
+
     def test_password_pattern(self):
         """password=, secret: 形式の検出"""
         patterns = [
