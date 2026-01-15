@@ -15,10 +15,11 @@ class PrivacyScanner:
             "EMAIL": r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",
             "PHONE": r"\d{2,4}-\d{2,4}-\d{3,4}",
             "ZIP": r"〒?\d{3}-\d{4}",
-            "MY_NUMBER": r"\d{4}[-\s]?\d{4}[-\s]?\d{4}",
             # 拡張パターン (P0-2)
             "IP_ADDRESS": r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}",
+            # Specific patterns first to avoid partial matching (e.g. Credit Card > My Number)
             "CREDIT_CARD": r"\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}",
+            "MY_NUMBER": r"\d{4}[-\s]?\d{4}[-\s]?\d{4}",
             # API Keys (拡張: v4.1)
             "API_KEY": r"(?:sk-|pk_|AIza|ghp_|gsk_|glpat-|xox[baprs]-|Bearer\s+)[a-zA-Z0-9_-]{20,}",
             "AWS_KEY": r"AKIA[0-9A-Z]{16}",
@@ -40,17 +41,25 @@ class PrivacyScanner:
             "取扱注意",
         ]
 
+        # Performance: Compile regex patterns and pre-calculate uppercase keywords
+        self.compiled_patterns = {k: re.compile(v) for k, v in self.patterns.items()}
+        self.sensitive_keywords_upper = [kw.upper() for kw in self.sensitive_keywords]
+
     def scan(self, text: str) -> dict:
         findings = {}
         # Regex パターンマッチ
-        for p_type, pattern in self.patterns.items():
-            matches = re.findall(pattern, text)
+        for p_type, pattern in self.compiled_patterns.items():
+            matches = pattern.findall(text)
             if matches:
                 findings[p_type] = list(set(matches))
 
         # キーワードマッチ
         text_upper = text.upper()
-        keyword_hits = [kw for kw in self.sensitive_keywords if kw.upper() in text_upper]
+        keyword_hits = [
+            self.sensitive_keywords[i]
+            for i, kw_upper in enumerate(self.sensitive_keywords_upper)
+            if kw_upper in text_upper
+        ]
         if keyword_hits:
             findings["SENSITIVE_KEYWORD"] = keyword_hits
 
@@ -66,9 +75,9 @@ class PrivacyScanner:
             tuple: (is_blocked: bool, matched_keyword: str | None)
         """
         text_upper = text.upper()
-        for kw in self.sensitive_keywords:
-            if kw.upper() in text_upper:
-                return True, kw
+        for i, kw_upper in enumerate(self.sensitive_keywords_upper):
+            if kw_upper in text_upper:
+                return True, self.sensitive_keywords[i]
         return False, None
 
 

@@ -1,0 +1,3 @@
+## 2024-05-22 - Regex Optimization Surprises
+**Learning:** Combined regex (joining multiple patterns with `|` and using named groups) proved to be SLOWER (~2.5s vs ~1.9s) than iterating over pre-compiled regexes in this specific use case. This might be due to the complexity of the combined regex causing excessive backtracking or the overhead of managing match groups in Python's `re` module.
+**Action:** When optimizing multiple regex patterns, benchmark both combined and iterative approaches. Do not assume one is faster. For this codebase, stick to iterative execution with pre-compiled patterns.
