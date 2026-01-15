@@ -11,6 +11,7 @@ from fastapi import FastAPI, Depends, Header, HTTPException
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
+import secrets
 from src.infra.database import init_db
 from src.core.config import settings
 from src.core import processor as logic
@@ -54,7 +55,8 @@ async def verify_token(authorization: str = Header(None)):
             }
         )
     
-    if parts[1] != settings.API_TOKEN:
+    # 🔒 Timing attack protection
+    if not secrets.compare_digest(parts[1], settings.API_TOKEN):
         raise HTTPException(
             status_code=403,
             detail={"error": "forbidden", "message": "トークンが無効です"}
