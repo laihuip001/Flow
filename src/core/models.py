@@ -42,8 +42,8 @@ class SyncJob(Base):
 
 # API Models
 class TextRequest(BaseModel):
-    text: str
-    seasoning: int = Field(30, description="Seasoning level 0-100 (0=Salt, 50=Sauce, 100=Spice)")
+    text: str = Field(..., max_length=20000, description="Text to process")
+    seasoning: int = Field(30, ge=0, le=100, description="Seasoning level 0-100 (0=Salt, 50=Sauce, 100=Spice)")
     current_app: Optional[str] = Field(None, description="Optional: アプリ名による補正用")
     mode: Optional[str] = None
     temperature: Optional[float] = None
@@ -91,5 +91,5 @@ class ClipboardHistoryItem(BaseModel):
 class ImageProcessRequest(BaseModel):
     """画像認識用リクエスト"""
     image_base64: str = Field(..., description="Base64エンコードされた画像")
-    seasoning: int = Field(30, description="Seasoning level 0-100")
+    seasoning: int = Field(30, ge=0, le=100, description="Seasoning level 0-100")
     prompt: Optional[str] = Field(None, description="追加の指示")
