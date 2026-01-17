@@ -39,18 +39,43 @@ class PrivacyScanner:
             "DO NOT SHARE",
             "取扱注意",
         ]
+        # Optimization: Pre-compute uppercase keywords
+        self.sensitive_keywords_upper = [k.upper() for k in self.sensitive_keywords]
+
+        # Optimization: Compiled regex for digit check
+        self.digit_pattern = re.compile(r"\d")
 
     def scan(self, text: str) -> dict:
         findings = {}
+        has_digits = None
+
         # Regex パターンマッチ
         for p_type, pattern in self.patterns.items():
+            # Optimization: Pre-checks to skip expensive regex
+            if p_type == "EMAIL" and "@" not in text:
+                continue
+
+            if p_type == "AWS_KEY" and "AKIA" not in text:
+                continue
+
+            # Check for patterns requiring digits
+            if p_type in {"PHONE", "ZIP", "MY_NUMBER", "CREDIT_CARD", "IP_ADDRESS"}:
+                if has_digits is None:
+                    has_digits = bool(self.digit_pattern.search(text))
+                if not has_digits:
+                    continue
+
             matches = re.findall(pattern, text)
             if matches:
                 findings[p_type] = list(set(matches))
 
         # キーワードマッチ
         text_upper = text.upper()
-        keyword_hits = [kw for kw in self.sensitive_keywords if kw.upper() in text_upper]
+        # Optimization: Use pre-computed uppercase keywords
+        keyword_hits = [
+            kw for kw, kw_upper in zip(self.sensitive_keywords, self.sensitive_keywords_upper)
+            if kw_upper in text_upper
+        ]
         if keyword_hits:
             findings["SENSITIVE_KEYWORD"] = keyword_hits
 
@@ -66,8 +91,9 @@ class PrivacyScanner:
             tuple: (is_blocked: bool, matched_keyword: str | None)
         """
         text_upper = text.upper()
-        for kw in self.sensitive_keywords:
-            if kw.upper() in text_upper:
+        # Optimization: Use pre-computed uppercase keywords
+        for kw, kw_upper in zip(self.sensitive_keywords, self.sensitive_keywords_upper):
+            if kw_upper in text_upper:
                 return True, kw
         return False, None
 
