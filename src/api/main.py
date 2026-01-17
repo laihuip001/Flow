@@ -7,6 +7,7 @@ Pre-processing × Speed - The Seasoning Update
 This is the main entry point for the FastAPI application.
 All route handlers are organized in the routes/ package.
 """
+import secrets
 from fastapi import FastAPI, Depends, Header, HTTPException
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -54,7 +55,7 @@ async def verify_token(authorization: str = Header(None)):
             }
         )
     
-    if parts[1] != settings.API_TOKEN:
+    if not secrets.compare_digest(parts[1], settings.API_TOKEN):
         raise HTTPException(
             status_code=403,
             detail={"error": "forbidden", "message": "トークンが無効です"}
