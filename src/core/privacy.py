@@ -27,6 +27,9 @@ class PrivacyScanner:
             # 日本住所 (v4.1)
             "JP_ADDRESS": r"(?:東京都|北海道|(?:京都|大阪)府|[^\s]{2,3}県)[^\s]{2,}[市区町村]",
         }
+        # Pre-compile patterns for performance
+        self.compiled_patterns = {k: re.compile(v) for k, v in self.patterns.items()}
+
         # 機密キーワード (大文字小文字無視)
         self.sensitive_keywords = [
             "CONFIDENTIAL",
@@ -39,18 +42,24 @@ class PrivacyScanner:
             "DO NOT SHARE",
             "取扱注意",
         ]
+        # Pre-calculate uppercase keywords for performance
+        self.sensitive_keywords_upper = {kw: kw.upper() for kw in self.sensitive_keywords}
 
     def scan(self, text: str) -> dict:
         findings = {}
         # Regex パターンマッチ
-        for p_type, pattern in self.patterns.items():
-            matches = re.findall(pattern, text)
+        for p_type, pattern in self.compiled_patterns.items():
+            matches = pattern.findall(text)
             if matches:
                 findings[p_type] = list(set(matches))
 
         # キーワードマッチ
         text_upper = text.upper()
-        keyword_hits = [kw for kw in self.sensitive_keywords if kw.upper() in text_upper]
+        # Use pre-calculated uppercase keywords
+        keyword_hits = [
+            kw for kw, kw_upper in self.sensitive_keywords_upper.items()
+            if kw_upper in text_upper
+        ]
         if keyword_hits:
             findings["SENSITIVE_KEYWORD"] = keyword_hits
 
@@ -66,8 +75,8 @@ class PrivacyScanner:
             tuple: (is_blocked: bool, matched_keyword: str | None)
         """
         text_upper = text.upper()
-        for kw in self.sensitive_keywords:
-            if kw.upper() in text_upper:
+        for kw, kw_upper in self.sensitive_keywords_upper.items():
+            if kw_upper in text_upper:
                 return True, kw
         return False, None
 
