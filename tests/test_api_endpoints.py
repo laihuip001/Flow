@@ -133,5 +133,47 @@ class TestCoreEndpoints(unittest.TestCase):
         self.assertIn(response.status_code, [200, 401, 403])
 
 
+class TestSafetyEndpoints(unittest.TestCase):
+    """Safety (/scan, /prefetch) Endpoints Security Tests"""
+
+    def setUp(self):
+        self.client = TestClient(app)
+
+    def test_prefetch_auth_required(self):
+        """POST /prefetch - Requires Auth"""
+        # Patch settings.API_TOKEN to simulate auth enabled
+        with patch("src.core.config.settings.API_TOKEN", "test-token"):
+            # 1. No Auth
+            response = self.client.post(
+                "/prefetch",
+                json={"text": "test", "target_seasoning_levels": [10]}
+            )
+            self.assertEqual(response.status_code, 401)
+
+            # 2. Invalid Auth
+            response = self.client.post(
+                "/prefetch",
+                json={"text": "test", "target_seasoning_levels": [10]},
+                headers={"Authorization": "Bearer wrong"}
+            )
+            self.assertEqual(response.status_code, 403)
+
+            # 3. Valid Auth
+            response = self.client.post(
+                "/prefetch",
+                json={"text": "test", "target_seasoning_levels": [10]},
+                headers={"Authorization": "Bearer test-token"}
+            )
+            self.assertEqual(response.status_code, 200)
+
+    def test_scan_public(self):
+        """POST /scan - Public Access"""
+        with patch("src.core.config.settings.API_TOKEN", "test-token"):
+             response = self.client.post(
+                "/scan",
+                json={"text": "test", "seasoning": 30}
+            )
+             self.assertEqual(response.status_code, 200)
+
 if __name__ == "__main__":
     unittest.main()

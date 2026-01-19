@@ -14,6 +14,7 @@ from pathlib import Path
 from src.infra.database import init_db
 from src.core.config import settings
 from src.core import processor as logic
+from src.api.dependencies import verify_token
 
 # Static files directory
 STATIC_DIR = Path(__file__).parent.parent / "static"
@@ -27,41 +28,6 @@ app = FastAPI(
     description="Pre-processing × Speed - The Seasoning Update",
     version="4.0.0"
 )
-
-# --- 🔐 認証ミドルウェア ---
-async def verify_token(authorization: str = Header(None)):
-    """Bearer Token認証"""
-    if not settings.API_TOKEN:
-        return True
-    
-    if not authorization:
-        raise HTTPException(
-            status_code=401,
-            detail={
-                "error": "unauthorized",
-                "message": "認証が必要です",
-                "action": "Authorization: Bearer <token> ヘッダーを追加してください"
-            }
-        )
-    
-    parts = authorization.split()
-    if len(parts) != 2 or parts[0].lower() != "bearer":
-        raise HTTPException(
-            status_code=401,
-            detail={
-                "error": "invalid_auth_format",
-                "message": "認証形式が不正です"
-            }
-        )
-    
-    if parts[1] != settings.API_TOKEN:
-        raise HTTPException(
-            status_code=403,
-            detail={"error": "forbidden", "message": "トークンが無効です"}
-        )
-    
-    return True
-
 
 # --- Initialize Processor ---
 core_processor = logic.CoreProcessor()
