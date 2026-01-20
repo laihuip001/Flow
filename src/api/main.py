@@ -54,7 +54,9 @@ async def verify_token(authorization: str = Header(None)):
             }
         )
     
-    if parts[1] != settings.API_TOKEN:
+    # 🛡️ Timing Attack対策: constant_time comparison
+    import secrets
+    if not secrets.compare_digest(parts[1], settings.API_TOKEN):
         raise HTTPException(
             status_code=403,
             detail={"error": "forbidden", "message": "トークンが無効です"}
