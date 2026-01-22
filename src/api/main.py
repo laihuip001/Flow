@@ -14,6 +14,7 @@ from pathlib import Path
 from src.infra.database import init_db
 from src.core.config import settings
 from src.core import processor as logic
+import secrets
 
 # Static files directory
 STATIC_DIR = Path(__file__).parent.parent / "static"
@@ -54,7 +55,7 @@ async def verify_token(authorization: str = Header(None)):
             }
         )
     
-    if parts[1] != settings.API_TOKEN:
+    if not secrets.compare_digest(parts[1], settings.API_TOKEN):
         raise HTTPException(
             status_code=403,
             detail={"error": "forbidden", "message": "トークンが無効です"}
