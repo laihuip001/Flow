@@ -4,6 +4,7 @@ Privacy Module - PII検知とマスキング
 責務: 個人情報の検知、マスク、復元
 """
 import re
+from .vocab_store import get_vocab_store
 
 
 class PrivacyScanner:
@@ -27,6 +28,16 @@ class PrivacyScanner:
             # 日本住所 (v4.1)
             "JP_ADDRESS": r"(?:東京都|北海道|(?:京都|大阪)府|[^\s]{2,3}県)[^\s]{2,}[市区町村]",
         }
+
+        # Pre-compile patterns for performance
+        self.compiled_patterns = {
+            k: re.compile(v) for k, v in self.patterns.items()
+        }
+
+        # Optimization pre-calculation
+        self.api_key_prefixes = ["sk-", "pk_", "AIza", "ghp_", "gsk_", "glpat-", "xox", "Bearer"]
+        self.password_keywords_upper = ["PASSWORD", "PASSWD", "PWD", "SECRET", "TOKEN"]
+
         # 機密キーワード (大文字小文字無視)
         self.sensitive_keywords = [
             "CONFIDENTIAL",
@@ -39,18 +50,46 @@ class PrivacyScanner:
             "DO NOT SHARE",
             "取扱注意",
         ]
+        # Pre-calculate upper case keywords
+        self.sensitive_keywords_upper = [kw.upper() for kw in self.sensitive_keywords]
 
     def scan(self, text: str) -> dict:
         findings = {}
+        text_upper = text.upper()
+
         # Regex パターンマッチ
-        for p_type, pattern in self.patterns.items():
-            matches = re.findall(pattern, text)
+        for p_type, pattern in self.compiled_patterns.items():
+            # Pre-checks to skip expensive regex (only for strict patterns)
+            # PHONE, ZIP, IP_ADDRESS skipped to avoid regression if flexible formats are allowed later
+            if p_type == "EMAIL":
+                if "@" not in text: continue
+            elif p_type == "AWS_KEY":
+                if "AKIA" not in text: continue
+            elif p_type == "JP_ADDRESS":
+                # Must contain prefecture AND municipality suffix (regex enforces this)
+                if not (any(c in text for c in "都道府県") and any(c in text for c in "市区町村")):
+                    continue
+            elif p_type == "API_KEY":
+                # Must contain one of the prefixes (regex is union of these)
+                if not any(p in text for p in self.api_key_prefixes):
+                    continue
+            elif p_type == "PASSWORD":
+                # Case insensitive match (regex uses (?i))
+                if not any(k in text_upper for k in self.password_keywords_upper):
+                    continue
+
+            # Run regex if pre-check passed (or no pre-check)
+            matches = pattern.findall(text)
             if matches:
                 findings[p_type] = list(set(matches))
 
         # キーワードマッチ
-        text_upper = text.upper()
-        keyword_hits = [kw for kw in self.sensitive_keywords if kw.upper() in text_upper]
+        # Use pre-calculated upper case keywords and text_upper
+        keyword_hits = []
+        for i, kw_upper in enumerate(self.sensitive_keywords_upper):
+            if kw_upper in text_upper:
+                keyword_hits.append(self.sensitive_keywords[i])
+
         if keyword_hits:
             findings["SENSITIVE_KEYWORD"] = keyword_hits
 
@@ -66,9 +105,10 @@ class PrivacyScanner:
             tuple: (is_blocked: bool, matched_keyword: str | None)
         """
         text_upper = text.upper()
-        for kw in self.sensitive_keywords:
-            if kw.upper() in text_upper:
-                return True, kw
+        # Use pre-calculated upper keywords
+        for i, kw_upper in enumerate(self.sensitive_keywords_upper):
+            if kw_upper in text_upper:
+                return True, self.sensitive_keywords[i]
         return False, None
 
 
@@ -103,7 +143,7 @@ class PrivacyHandler:
         # 2. カスタム語彙ベースのマスク（オプション）
         if use_custom_vocab:
             try:
-                from .vocab_store import get_vocab_store
+                # Optimized import: moved to top level
                 store = get_vocab_store()
                 custom_terms = store.find_in_text(masked_text)
                 for term in custom_terms:
