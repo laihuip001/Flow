@@ -7,7 +7,7 @@ class TestPrivacyHandler:
     def handler(self):
         return PrivacyHandler()
 
-    @patch("src.core.vocab_store.get_vocab_store")
+    @patch("src.core.privacy.get_vocab_store")
     def test_mask_with_custom_vocab(self, mock_get_store, handler):
         """カスタム語彙ストアを使用したマスク処理のテスト"""
         # Mockのセットアップ
@@ -26,7 +26,7 @@ class TestPrivacyHandler:
         restored = handler.unmask(masked, mapping)
         assert restored == text
 
-    @patch("src.core.vocab_store.get_vocab_store")
+    @patch("src.core.privacy.get_vocab_store")
     def test_mask_vocab_error_fallback(self, mock_get_store, handler):
         """VocabStoreがエラーを返してもプロセスが落ちないことを確認"""
         mock_get_store.side_effect = Exception("Database connection failed")
