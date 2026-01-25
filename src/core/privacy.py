@@ -39,18 +39,28 @@ class PrivacyScanner:
             "DO NOT SHARE",
             "取扱注意",
         ]
+        # Pre-compile regex patterns for performance
+        self.compiled_patterns = {
+            p_type: re.compile(pattern) for p_type, pattern in self.patterns.items()
+        }
+        # Pre-calculate uppercase keywords for performance
+        self.sensitive_keywords_upper = [kw.upper() for kw in self.sensitive_keywords]
 
     def scan(self, text: str) -> dict:
         findings = {}
         # Regex パターンマッチ
-        for p_type, pattern in self.patterns.items():
-            matches = re.findall(pattern, text)
+        for p_type, pattern in self.compiled_patterns.items():
+            matches = pattern.findall(text)
             if matches:
                 findings[p_type] = list(set(matches))
 
         # キーワードマッチ
         text_upper = text.upper()
-        keyword_hits = [kw for kw in self.sensitive_keywords if kw.upper() in text_upper]
+        keyword_hits = []
+        for kw, kw_upper in zip(self.sensitive_keywords, self.sensitive_keywords_upper):
+            if kw_upper in text_upper:
+                keyword_hits.append(kw)
+
         if keyword_hits:
             findings["SENSITIVE_KEYWORD"] = keyword_hits
 
@@ -66,8 +76,8 @@ class PrivacyScanner:
             tuple: (is_blocked: bool, matched_keyword: str | None)
         """
         text_upper = text.upper()
-        for kw in self.sensitive_keywords:
-            if kw.upper() in text_upper:
+        for kw, kw_upper in zip(self.sensitive_keywords, self.sensitive_keywords_upper):
+            if kw_upper in text_upper:
                 return True, kw
         return False, None
 
