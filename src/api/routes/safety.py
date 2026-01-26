@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 from src.infra.database import get_db
 from src.core.models import TextRequest, PrefetchRequest, ScanResponse, PrefetchCache
 from src.core import processor as logic
+from src.core.privacy import PrivacyScanner
+from src.api.auth import verify_token
 import asyncio
 from typing import Optional
 
@@ -24,7 +26,7 @@ def set_processor(processor: logic.CoreProcessor):
 @router.post("/scan", response_model=ScanResponse, tags=["Safety"])
 def scan_text(req: TextRequest):
     """個人情報検知（認証不要）"""
-    scanner = logic.PrivacyScanner()
+    scanner = PrivacyScanner()
     result = scanner.scan(req.text)
     if result["has_risks"]:
         result["message"] = f"⚠️ {result['risk_count']}件の個人情報が含まれています。送信前に確認してください。"
@@ -34,11 +36,11 @@ def scan_text(req: TextRequest):
 
 
 # --- 🚀 先読み ---
-@router.post("/prefetch", tags=["Background"])
+@router.post("/prefetch", tags=["Background"], dependencies=[Depends(verify_token)])
 async def trigger_prefetch(req: PrefetchRequest, bg_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """スイッチON時のみ呼ばれる先読み"""
     if core_processor:
-        bg_tasks.add_task(asyncio.create_task, core_processor.run_prefetch(req.text, req.target_seasoning_levels, db))
+        bg_tasks.add_task(core_processor.run_prefetch, req.text, req.target_seasoning_levels, db)
     return {"status": "accepted", "hash": logic.get_text_hash(req.text)}
 
 
