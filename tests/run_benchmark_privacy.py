@@ -1,5 +1,6 @@
 import time
 import textwrap
+import statistics
 from src.core.privacy import mask_pii
 
 # 100kb text with some PII
@@ -10,12 +11,16 @@ dummy_text = textwrap.dedent("""
     Here is some more text to fill space.
 """) * 1000  # ~1000 PII instances, ~100KB
 
-start = time.time()
-mask_pii(dummy_text)
-duration = time.time() - start
+times = []
+for _ in range(20):
+    start = time.time()
+    mask_pii(dummy_text)
+    duration = time.time() - start
+    times.append(duration)
 
-print(f"Time to mask 100KB text: {duration:.4f} seconds")
-if duration > 0.05:
+avg_time = statistics.mean(times)
+print(f"Average time to mask 100KB text: {avg_time:.4f} seconds (over 20 runs)")
+if avg_time > 0.05:
     print("⚠️ SLOW: This will block the event loop noticeably.")
 else:
     print("✅ FAST: Negligible impact.")
