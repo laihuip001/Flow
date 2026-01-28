@@ -10,23 +10,22 @@ class PrivacyScanner:
     """個人情報検知（警告のみ・置換なし）"""
 
     def __init__(self):
+        # Optimized: Ordered by specificity (Length desc or specific format first)
+        # Using re.IGNORECASE globally for performance and safer detection
         self.patterns = {
-            # 基本PII
-            "EMAIL": r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",
+            # Specific/Long patterns first to handle overlaps (e.g. Credit Card > My Number)
+            "CREDIT_CARD": r"\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}",
+            "API_KEY": r"(?:sk-|pk_|AIza|ghp_|gsk_|glpat-|xox[baprs]-|Bearer\s+)[a-z0-9_-]{20,}",
+            "AWS_KEY": r"AKIA[0-9a-z]{16}",
+            "EMAIL": r"[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}",
+            "MY_NUMBER": r"\d{4}[-\s]?\d{4}[-\s]?\d{4}",
             "PHONE": r"\d{2,4}-\d{2,4}-\d{3,4}",
             "ZIP": r"〒?\d{3}-\d{4}",
-            "MY_NUMBER": r"\d{4}[-\s]?\d{4}[-\s]?\d{4}",
-            # 拡張パターン (P0-2)
             "IP_ADDRESS": r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}",
-            "CREDIT_CARD": r"\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}",
-            # API Keys (拡張: v4.1)
-            "API_KEY": r"(?:sk-|pk_|AIza|ghp_|gsk_|glpat-|xox[baprs]-|Bearer\s+)[a-zA-Z0-9_-]{20,}",
-            "AWS_KEY": r"AKIA[0-9A-Z]{16}",
-            # パスワード系 (v4.1)
-            "PASSWORD": r"(?i)(?:password|passwd|pwd|secret|token)\s*[=:]\s*['\"]?[^\s'\"]{8,}",
-            # 日本住所 (v4.1)
+            "PASSWORD": r"(?:password|passwd|pwd|secret|token)\s*[=:]\s*['\"]?[^\s'\"]{8,}",
             "JP_ADDRESS": r"(?:東京都|北海道|(?:京都|大阪)府|[^\s]{2,3}県)[^\s]{2,}[市区町村]",
         }
+
         # 機密キーワード (大文字小文字無視)
         self.sensitive_keywords = [
             "CONFIDENTIAL",
@@ -40,19 +39,31 @@ class PrivacyScanner:
             "取扱注意",
         ]
 
+        # Optimization: Combined Regex for single-pass scanning
+        regex_parts = []
+        for p_type, pattern in self.patterns.items():
+            regex_parts.append(f"(?P<{p_type}>{pattern})")
+
+        # Add keywords pattern (sorted by length desc)
+        sorted_keywords = sorted(self.sensitive_keywords, key=len, reverse=True)
+        keywords_pattern = "|".join(map(re.escape, sorted_keywords))
+        regex_parts.append(f"(?P<SENSITIVE_KEYWORD>{keywords_pattern})")
+
+        self.combined_pattern = re.compile("|".join(regex_parts), flags=re.IGNORECASE)
+
     def scan(self, text: str) -> dict:
         findings = {}
-        # Regex パターンマッチ
-        for p_type, pattern in self.patterns.items():
-            matches = re.findall(pattern, text)
-            if matches:
-                findings[p_type] = list(set(matches))
+        # Single pass scan
+        for match in self.combined_pattern.finditer(text):
+            p_type = match.lastgroup
+            val = match.group()
 
-        # キーワードマッチ
-        text_upper = text.upper()
-        keyword_hits = [kw for kw in self.sensitive_keywords if kw.upper() in text_upper]
-        if keyword_hits:
-            findings["SENSITIVE_KEYWORD"] = keyword_hits
+            if p_type not in findings:
+                findings[p_type] = set()
+            findings[p_type].add(val)
+
+        # Convert sets to lists
+        findings = {k: list(v) for k, v in findings.items()}
 
         count = sum(len(v) for v in findings.values())
         return {"has_risks": count > 0, "risks": findings, "risk_count": count}
@@ -65,10 +76,16 @@ class PrivacyScanner:
         Returns:
             tuple: (is_blocked: bool, matched_keyword: str | None)
         """
-        text_upper = text.upper()
-        for kw in self.sensitive_keywords:
-            if kw.upper() in text_upper:
-                return True, kw
+        # Optimized: Use regex search instead of iterating
+        if not hasattr(self, '_keyword_regex'):
+            sorted_keywords = sorted(self.sensitive_keywords, key=len, reverse=True)
+            pattern = "|".join(map(re.escape, sorted_keywords))
+            self._keyword_regex = re.compile(pattern, flags=re.IGNORECASE)
+
+        match = self._keyword_regex.search(text)
+        if match:
+            return True, match.group()
+
         return False, None
 
 

@@ -153,7 +153,8 @@ class TestPrivacyScanner:
         """大文字小文字を無視してブロックすることを確認"""
         is_blocked, keyword = scanner.check_deny_list("this is secret info")
         assert is_blocked is True
-        assert keyword == "SECRET"
+        # v5.0 Optimization: Returns actual matched text instead of canonical keyword
+        assert keyword.upper() == "SECRET"
 
     def test_deny_list_allows_safe_text(self, scanner):
         """安全なテキストはブロックされないことを確認"""
@@ -162,3 +163,49 @@ class TestPrivacyScanner:
         assert keyword is None
 
 
+import pytest
+from src.core.privacy import mask_pii, unmask_pii
+
+def test_overlap_credit_card_mynumber():
+    # Credit Card: 1234-5678-1234-5678
+    # My Number matches first 12: 1234-5678-1234
+
+    cc = "1234-5678-1234-5678"
+    text = f"Payment with {cc} please."
+
+    masked, mapping = mask_pii(text)
+
+    # Verify the Credit Card is FULLY masked
+    assert cc not in masked
+    assert "1234-5678" not in masked
+    # Check if we have leftover digits
+    # If partial mask happened: [PII_0]-5678
+    # Note: "[PII_0]" might be followed by "-5678" if partial.
+    # We check if "-5678" exists at the end of a PII block?
+    # Safer: masked text should look like "Payment with [PII_0] please."
+
+    # We expect exactly one PII placeholder for the CC
+    # Wait, if logic finds CC, it replaces it.
+
+    # If logic found My Number first:
+    # "Payment with [PII_0]-5678 please."
+
+    assert "-5678" not in masked, "Partial masking detected! Credit Card was matched as My Number."
+
+    # Verify restoration
+    restored = unmask_pii(masked, mapping)
+    assert restored == text
+
+def test_case_insensitive_keyword_overlap():
+    # Keyword: CONFIDENTIAL
+    # Text: "This is confidential info"
+    # Original bug: Did not mask "confidential" because of case mismatch in replace()
+
+    text = "This is confidential info"
+    masked, mapping = mask_pii(text)
+
+    assert "confidential" not in masked
+    assert "[PII_" in masked
+
+    restored = unmask_pii(masked, mapping)
+    assert restored == text
