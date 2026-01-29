@@ -1,0 +1,3 @@
+## 2024-05-23 - Combined Regex Performance Regression
+**Learning:** Combining multiple regex patterns into a single `|` joined pattern with `finditer` (Python loop) proved SLOWER (~50%) than iterating over separate patterns using `findall` (C loop) for PII detection in Python.
+**Action:** When detecting multiple patterns in Python, prefer multiple passes with `findall` over single pass with complex regex `finditer` unless correctness (overlaps) requires single pass state machine or patterns are very simple. For overlaps, careful ordering of `findall` passes combined with `replace` logic works sufficiently.
