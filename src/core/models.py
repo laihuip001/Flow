@@ -42,14 +42,14 @@ class SyncJob(Base):
 
 # API Models
 class TextRequest(BaseModel):
-    text: str
+    text: str = Field(..., max_length=100000)
     seasoning: int = Field(30, description="Seasoning level 0-100 (0=Salt, 50=Sauce, 100=Spice)")
     current_app: Optional[str] = Field(None, description="Optional: アプリ名による補正用")
     mode: Optional[str] = None
     temperature: Optional[float] = None
 
 class PrefetchRequest(BaseModel):
-    text: str
+    text: str = Field(..., max_length=100000)
     target_seasoning_levels: List[int] = [10, 50, 90]  # Salt, Sauce, Spice
 
 class ScanResponse(BaseModel):

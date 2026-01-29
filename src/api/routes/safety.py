@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from src.infra.database import get_db
 from src.core.models import TextRequest, PrefetchRequest, ScanResponse, PrefetchCache
 from src.core import processor as logic
+from src.core.privacy import PrivacyScanner
 import asyncio
 from typing import Optional
 
@@ -24,7 +25,7 @@ def set_processor(processor: logic.CoreProcessor):
 @router.post("/scan", response_model=ScanResponse, tags=["Safety"])
 def scan_text(req: TextRequest):
     """個人情報検知（認証不要）"""
-    scanner = logic.PrivacyScanner()
+    scanner = PrivacyScanner()
     result = scanner.scan(req.text)
     if result["has_risks"]:
         result["message"] = f"⚠️ {result['risk_count']}件の個人情報が含まれています。送信前に確認してください。"
